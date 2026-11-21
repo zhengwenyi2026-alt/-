@@ -11,7 +11,7 @@ const { once } = require('events');
 const WebSocket = require('ws');
 
 const { Hub } = require('../src/main/engine/hub');
-const { lanInterfaces, unicastProbeTargets } = require('../src/main/engine/net');
+const { lanInterfaces, unicastProbeTargets, pickLanAddress, resolveHostIp } = require('../src/main/engine/net');
 const { PROTO_VERSION, CHUNK_SIZE, encodeChunk, decodeChunk, sanitizeName, sanitizeRel } = require('../src/main/engine/protocol');
 const { generateRoomCode, normalizeRoomCode, formatRoomCode, sanitizeRoomInput } = require('../src/main/engine/roomCode');
 
@@ -279,6 +279,42 @@ test('附近列表：条目 90 秒过期，不再误导「扫描到了就能加�
     { deviceId: 'b', name: '新房间', room: 'DEF345', ip: '192.0.2.2', port: 47810, at: Date.now() },
   ];
   assert.deepEqual(hub.state().visible.map((r) => r.room), ['DEF345']);
+});
+
+test('应答地址：房主选自己同网段的地址应答，不把提问方的 IP 回显回去', () => {
+  const real = os.networkInterfaces;
+  os.networkInterfaces = () => ({
+    en0: [{ family: 'IPv4', internal: false, address: '192.168.1.23', netmask: '255.255.255.0' }],
+  });
+  try {
+    assert.equal(pickLanAddress('192.168.1.77'), '192.168.1.23', '与提问方同网段优先');
+    assert.equal(pickLanAddress('127.0.0.5'), '127.0.0.1', '回环来源（同机实例）回回环地址');
+    assert.equal(pickLanAddress('10.9.9.9'), '192.168.1.23', '不同网段退回第一块真实网卡');
+  } finally {
+    os.networkInterfaces = real;
+  }
+});
+
+test('房主 IP 解析：加入方采信 UDP 回包来源，不采信旧版房主回显的提问方 IP', () => {
+  assert.equal(resolveHostIp('192.168.0.183', '192.168.0.5'), '192.168.0.5', '回包来源地址永远优先');
+  assert.equal(resolveHostIp('', '192.168.0.5'), '192.168.0.5', '没有自报地址时用回包来源');
+  assert.equal(resolveHostIp('192.168.0.9', '0.0.0.0'), '192.168.0.9', '来源异常时退回房主自报地址');
+});
+
+test('加入被拒：报出连到的设备并提示重扫，而不是一句干巴巴的「房间码不正确」', async (t) => {
+  const host = new Hub({ deviceName: '真房主', saveDir: tmpDir('host-reject'), autoApprove: true, udpPort: 47818 });
+  const guest = new Hub({ deviceName: '访客机', saveDir: tmpDir('guest-reject'), udpPort: 47818 });
+  t.after(() => {
+    host.dispose();
+    guest.dispose();
+  });
+  await host.startRoom();
+  // 模拟「发现时房间还在、连接前被重建」：发现结果指向真房主的端口，但房间码对不上
+  guest._discover = async () => [{ deviceId: 'stale', name: '真房主', room: 'ZZZZZZ', ip: '127.0.0.1', port: host.room.port }];
+  const errEvent = nextEvent(guest, 'join-error', null, 15_000);
+  await assert.rejects(() => guest.joinRoom('ZZZZZZ'), /房间码被 真房主 拒绝/);
+  const ev = await errEvent;
+  assert.match(ev.msg, /重新扫描/, '被拒错误也应引导用户重新扫描');
 });
 
 test('传送文本：即时文本、生成 TXT、越界拒绝', async (t) => {

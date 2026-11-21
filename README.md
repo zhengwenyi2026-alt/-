@@ -2,7 +2,7 @@
 
 局域网内**免服务器、拖拽即传**文件的跨平台桌面应用。一台设备点「创建房间」拿到 6 位房间码，另一台设备输入房间码加入，然后把文件拖进窗口、按「开始传送」，文件就出现在对方电脑的下载目录里——体验对齐苹果「隔空投送」，但**Windows 与 Mac 之间都能互传**。不在同一个网络时，还能挂一个自己的中继（Cloudflare / Vercel / 自建 Node）跨网段传输。
 
-**下载站**：<https://zhengwenyi2026-alt.github.io/-/> ｜ **Release 与安装包**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.1>
+**下载站**：<https://zhengwenyi2026-alt.github.io/-/> ｜ **Release 与安装包**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.2>
 
 > 命名说明：「隔空投送 / AirDrop」是 Apple Inc. 的注册商标，本项目与之**没有任何关系**，不使用、也不逆向任何 Apple 私有协议。隔空传 / SkyDrop 是一个独立的原创名称与实现。
 
@@ -56,30 +56,30 @@
 ## 下载安装
 
 **下载站**：<https://zhengwenyi2026-alt.github.io/-/>（按打开页面的系统自动推荐安装包，附 sha256）
-**Release**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.1>
+**Release**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.2>
 
 | 平台 | 下载文件 | 体积 | 安装方式 |
 | --- | --- | --- | --- |
-| Apple Silicon Mac | `SkyDrop-1.0.1-arm64.dmg` | 108.4 MB | 打开 dmg → 把图标拖进 `Applications` |
-| Intel Mac | `SkyDrop-1.0.1-x64.dmg` | 111.2 MB | 同上 |
-| macOS 免挂载 | `SkyDrop-1.0.1-arm64.zip` | 112.9 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
-| Windows 10/11（x64） | `SkyDrop-Setup-1.0.1-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式；安装时请求一次 UAC 并自动添加防火墙放行规则 |
-| Windows ARM64 | `SkyDrop-Setup-1.0.1-arm64.exe` | 110.5 MB | 同上（骁龙等 ARM 笔记本） |
-| Windows 免安装（x64） | `SkyDrop-Portable-1.0.1-x64.exe` | 105.5 MB | 单文件双击直接运行 |
-| Windows 免安装（ARM64） | `SkyDrop-Portable-1.0.1-arm64.exe` | 100.6 MB | 单文件双击直接运行 |
+| Apple Silicon Mac | `SkyDrop-1.0.2-arm64.dmg` | 108.4 MB | 打开 dmg → 把图标拖进 `Applications` |
+| Intel Mac | `SkyDrop-1.0.2-x64.dmg` | 111.2 MB | 同上 |
+| macOS 免挂载 | `SkyDrop-1.0.2-arm64.zip` | 112.9 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
+| Windows 10/11（x64） | `SkyDrop-Setup-1.0.2-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式；安装时请求一次 UAC 并自动添加防火墙放行规则 |
+| Windows ARM64 | `SkyDrop-Setup-1.0.2-arm64.exe` | 110.5 MB | 同上（骁龙等 ARM 笔记本） |
+| Windows 免安装（x64） | `SkyDrop-Portable-1.0.2-x64.exe` | 105.5 MB | 单文件双击直接运行 |
+| Windows 免安装（ARM64） | `SkyDrop-Portable-1.0.2-arm64.exe` | 100.6 MB | 单文件双击直接运行 |
 
 Release 资产用英文名 `SkyDrop-` 开头（非 ASCII 文件名在部分下载工具里会被转义），安装后的应用名仍然是**「隔空传」**。本机 `npm run release` 出来的文件在 `可执行文件/` 下，名字是中文的 `隔空传-…`，内容与 Release 资产逐字节相同（`dist/` 是构建中间目录）。
 
 sha256：
 
 ```
-ea5a8b74f0ba516f2168e0cdd90d1b38037ee3709373f019456e6c2be46276cd  SkyDrop-1.0.1-arm64.dmg
-0ba27fcde4a0e3102a5b42904808872aa2a791443adef25fb6fdbb20dd7acad2  SkyDrop-1.0.1-x64.dmg
-e40e30bfab73738cdb19088148ba1e5a13b242eb744b32642e319c6c0caba83c  SkyDrop-1.0.1-arm64.zip
-502e2d0d55f6b0779eecc7b2455f66a812fe9324d721c7336358b6004599940f  SkyDrop-Setup-1.0.1-x64.exe
-f0089bba0d11894e875e1f7a7d32de1cd3f91334de9c1fd4149c2e304d51c507  SkyDrop-Setup-1.0.1-arm64.exe
-ecc8632c8783d06801a189c6afcc3ca8e5d84f9a738d7c13bbb918cd15bbd6f5  SkyDrop-Portable-1.0.1-x64.exe
-a3297eb65e1a5fe3d845ad2cea784f25fe2e010d494e1c0ad293bf4ca34d0768  SkyDrop-Portable-1.0.1-arm64.exe
+c8dc0d923f463d995f45239a1469c5015d4d6c65c52364050206981aac49b46f  SkyDrop-1.0.2-arm64.dmg
+5e19f1ee5a2e58e5b7e99f39f423b13f7538884dd19466a90dfcb1af80f4b1c5  SkyDrop-1.0.2-x64.dmg
+7833cb077a0df2d0001b0dddf1f5f9695c243058ab57af3b5b3ca850257125b0  SkyDrop-1.0.2-arm64.zip
+e561d906fa6ff4fb75156102e916ac0c0fb8a8c570343009ebc13a0ab5fa0f94  SkyDrop-Setup-1.0.2-x64.exe
+5039744d0b0426fae5002cd58aa736d4b28a58c1e40d7e873a06c30c6c5706eb  SkyDrop-Setup-1.0.2-arm64.exe
+0cf8f6dd830fe4b8259d14a9a8a7bb63276332d71208bc53d783d25a47779689  SkyDrop-Portable-1.0.2-x64.exe
+efdbeb23ff8b3bbb33a0d7c2e03dd402cd3b627187ae3b764561aa5d43013e61  SkyDrop-Portable-1.0.2-arm64.exe
 ```
 
 ### macOS 首次打开
@@ -472,7 +472,7 @@ brew install --cask wine-stable
 | 面板实测 | `npm run verify:panel` | 起**真实应用实例** + 一个引擎侧发送方，传 **1.3 GB / 28 个文件**（3 个大文件 + 含 25 个小文件的目录），用无头 Chrome 打开面板截图存到 `out/panel/`：空闲页、传输中（进度 13.6%、176 MB / 1.3 GB、剩余 7 秒、逐文件明细已展开）、完成后、日 / 英 / 韩 / 繁四种首屏；同时校验访问控制（局域网来源连不上面板端口、局域网访问房间端口仍是 `404 SkyDrop`、本机访问房间端口返回面板页、原始 socket 伪造 Host 与缺 Host 均被拒、`localhost`/`127.0.0.1`/`[::1]` 三种 Host 放行、CSP 里 `script-src 'self'`）、数据正确性（面板统计字节 == 实际传输字节、历史一条成功任务、任务结束后峰值速率仍留存、中继参数透传、历史条目带 28 条文件明细、三个大文件落盘 sha256 逐一比对）、四种语言首屏互不相同、页面控制台零报错。全部通过时打印「结果：全部通过 ✅」，否则非零退出 |
 | 文本实测 | `npm run verify:text` | 起**真实应用实例** + 一个引擎侧访客（CDP 驱动真实窗口，载荷可调，默认含 2500 字长文本）：输入框打字 → 「仅文本发送」→ 访客立刻收到文本事件；访客反向发文本 → 应用「4 · 传送文本」列表出现「收到」行 → 点「复制」→ 用 `pbpaste` 对拍剪贴板逐字符一致；2500 字长文本折叠成 400 字、点击展开全文；40000 字超限 → 弹「文本过长」且对端收不到；「生成 TXT 发送」→ 访客收到 `文本 YYYY-MM-DD HH-MM-SS-n.txt`、内容逐字节一致、应用历史里是一条完成任务、`os.tmpdir()/skydrop-text` 临时目录自动清空；切到 English 校验文本卡片按钮与列表已翻译；面板快照带 `texts` 与 `textMaxBytes`；窗口控制台零报错。全部通过时打印「结果：全部通过 ✅」，否则非零退出 |
 | UI 端到端 | `npm run e2e` | 用 puppeteer-core 通过 CDP 驱动**两个真实 Electron 窗口**：A 建房间 → B 输码 → A 批准 → B 拖入 zip/txt/文件夹 → A 点接收 → 校验落盘内容逐字节一致、`.DS_Store` 被跳过、反向传输、**切换到英文并校验静态文案/按钮/历史记录/窗口标题都已翻译**、切回中文、离开房间后设备列表清空；随后**起一个本地中继进程跑跨网段阶段**：A 侧填中继 +「测试连接」→ 挂上房间槽位 → B 经中继加入（A 侧设备标记「互联网中继」）→ 双向确认 → 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零；输出 12 张截图到 `out/e2e/` |
-| 打包件实测 | `npm run verify:packaged` | 先 `hdiutil attach -nobrowse -readonly dist/隔空传-1.0.1-arm64.dmg -mountpoint /tmp/skydrop-mnt`，把 `隔空传.app` 拷到 `/tmp/skydrop-app/`（脚本从这里启动真实安装包），与源码实例配对后先切到 English 校验按钮文案与窗口标题（证明 5 语言词典确实进了 asar），传 8 MB 二进制 + 文本 + 目录；然后**再挂一个本地中继走跨网段那一遍**：打包版「测试连接」→ 槽位就绪 → 源码版经中继加入（打包版侧出现「互联网中继」标记）→ 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零，确认 asar 里的产物真的能建房、配对、经中继收文件 |
+| 打包件实测 | `npm run verify:packaged` | 先 `hdiutil attach -nobrowse -readonly dist/隔空传-1.0.2-arm64.dmg -mountpoint /tmp/skydrop-mnt`，把 `隔空传.app` 拷到 `/tmp/skydrop-app/`（脚本从这里启动真实安装包），与源码实例配对后先切到 English 校验按钮文案与窗口标题（证明 5 语言词典确实进了 asar），传 8 MB 二进制 + 文本 + 目录；然后**再挂一个本地中继走跨网段那一遍**：打包版「测试连接」→ 槽位就绪 → 源码版经中继加入（打包版侧出现「互联网中继」标记）→ 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零，确认 asar 里的产物真的能建房、配对、经中继收文件 |
 | 中继部署件 | `npx wrangler deploy --dry-run` | 在 `relay/` 下做打包校验：`wrangler 4.166.0` 通过，Total Upload 11.17 KiB（gzip 3.68 KiB），绑定 `env.SKYDROP_ROOM (SkyDropRelayRoom) Durable Object`——不需要真实 Cloudflare 账号即可确认 Worker 与 `wrangler.toml` 可用 |
 
 当前状态：引擎 + 中继 + 面板 32/32 通过（`npm test` 跑 `engine.test.js` 26 条与 `dashboard.test.js` 6 条，含 UDP 发现的单播兜底、坏目标不中断、加入失败自动重扫报出可用房间与列表过期），文本实测 `npm run verify:text` 「全部通过 ✅」，面板实测 `npm run verify:panel` 「全部通过 ✅」，端到端（含跨网段阶段）「全部通过 ✅」，打包件实测通过（局域网 8 MB + 经中继 2 MB，两次 sha256 都一致，关房间后中继侧 `{"rooms":0,"waiting":0,"pairs":0}`）。另外校验过 mac 与 win 两套安装包里的 `app.asar` md5 完全相同（同一份应用代码），且包内 10 个文件（`main/index.js`、`main/store.js`、`engine/hub.js`、`engine/peer.js`、`engine/protocol.js`、`engine/relay.js`、`common/i18n.js`、`renderer/app.js`、`renderer/index.html`、`preload/index.js`）逐个与仓库源码 md5 一致；asar 里还能直接读到 `relay.js` 的 `openRelaySlots` 与 5 语言的中继文案，说明跨网段功能确实进了安装包而不是只在源码里。

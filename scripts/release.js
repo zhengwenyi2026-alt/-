@@ -11,6 +11,7 @@ const ROOT = path.join(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
 const TARGET = path.join(ROOT, '可执行文件');
 const ARTIFACTS = ['.dmg', '.exe', '.zip'];
+const VERSION = require(path.join(ROOT, 'package.json')).version;
 
 function build(args) {
   console.log(`\n$ npx electron-builder ${args.join(' ')}`);
@@ -29,6 +30,7 @@ build(['--win']);
 const copied = [];
 for (const name of fs.readdirSync(DIST)) {
   if (!ARTIFACTS.some((ext) => name.endsWith(ext))) continue;
+  if (!name.includes(VERSION)) continue; // dist 里常有上一次构建的旧版本产物，不能混进来
   if (name.endsWith('.blockmap')) continue;
   fs.copyFileSync(path.join(DIST, name), path.join(TARGET, name));
   copied.push([name, fs.statSync(path.join(TARGET, name)).size]);

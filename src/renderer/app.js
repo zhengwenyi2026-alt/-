@@ -547,7 +547,8 @@ async function doJoin(code) {
     toast(t('房间码应为 6 位字母或数字'), 'warn');
     return;
   }
-  await call(api.join(value));
+  // join 失败的提示由 join-error 事件统一弹（带附近房间等上下文）；这里的 IPC 错误静默，避免双份弹窗
+  await call(api.join(value), true);
   await refresh();
 }
 
@@ -558,7 +559,7 @@ async function doJoinRelay(code) {
     toast(t('房间码应为 6 位字母或数字'), 'warn');
     return;
   }
-  await call(api.joinRelay(value));
+  await call(api.joinRelay(value), true);
   await refresh();
 }
 

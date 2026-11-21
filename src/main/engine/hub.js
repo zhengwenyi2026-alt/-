@@ -14,7 +14,7 @@ const I18N = require('../../common/i18n');
 const { parseRelayBase, dialRelay, openRelaySlots } = require('./relay');
 const { CHUNK_SIZE, PROTO_VERSION, MAX_TEXT_BYTES } = require('./protocol');
 const { generateRoomCode, normalizeRoomCode, formatRoomCode } = require('./roomCode');
-const { lanInterfaces, broadcastTargets, unicastProbeTargets, isPrivateAddress } = require('./net');
+const { lanInterfaces, broadcastTargets, unicastProbeTargets, isPrivateAddress, pickLanAddress, resolveHostIp } = require('./net');
 const { collectItems } = require('./files');
 const { dashboardHandler, startPanelServer } = require('./dashboard');
 
@@ -413,7 +413,7 @@ class Hub extends EventEmitter {
         : '局域网内没有找到这个房间。请确认对方已点「创建房间」且防火墙放行本应用；若路由器拦广播，在「高级」里手填对方的 IP:端口';
       this._emit({ type: 'join-error', msg, params: nearby.length ? { code: formatRoomCode(code), rooms } : undefined });
       this._pushState();
-      throw new Error(msg);
+      throw new Error(nearby.length ? msg.replace('{code}', formatRoomCode(code)).replace('{rooms}', rooms) : msg);
     }
     this.outgoing = { room: code, codeDisplay: formatRoomCode(code), status: 'connecting', host: targets[0].name };
     this._pushState();
@@ -434,6 +434,10 @@ class Hub extends EventEmitter {
         return this._joinResult(code, peer);
       } catch (err) {
         lastError = err;
+        if (/房间码不正确/.test(err.message)) {
+          // 对方明确拒了房间码：多半是房间在发现与连接之间重建过，报出连到的设备帮用户对位
+          lastError = new Error(`房间码被 ${target.name || target.ip} 拒绝——对方房间可能刚重建过，点「重新扫描」从列表加入最新房间`);
+        }
         if (/房间码不正确|拒绝/.test(err.message)) break;
       }
     }
@@ -647,7 +651,10 @@ class Hub extends EventEmitter {
       }
     });
 
-    peer.on('rejected', (reason) => this.notice('连接被拒绝：{reason}', { reason }, 'warn'));
+    peer.on('rejected', (reason) => {
+      if (this.outgoing) return; // 加入流程失败时会统一发 join-error，这里不再叠加一条「连接被拒绝」
+      this.notice('连接被拒绝：{reason}', { reason }, 'warn');
+    });
 
     peer.on('offer-in', (rec) => {
       const offer = this._trackOffer({ dir: 'in', peer, transferId: rec.transferId, files: rec.files, totalSize: rec.totalSize, state: 'pending' });
@@ -771,7 +778,7 @@ class Hub extends EventEmitter {
             room: this.room.code,
             name: this.deviceName,
             deviceId: this.deviceId,
-            ip: String(rinfo.address),
+            ip: pickLanAddress(rinfo.address), // 必须是房主自己的可达地址；回显提问方 IP 会让人连到自己
             port,
           })
         );
@@ -843,7 +850,7 @@ class Hub extends EventEmitter {
         if (!r || r.m !== MAGIC || r.a !== 'here') return;
         if (room && r.room !== room) return;
         if (String(r.deviceId) === String(this.deviceId)) return; // 忽略自己
-        const ip = r.ip && r.ip !== '0.0.0.0' ? r.ip : rinfo.address;
+        const ip = resolveHostIp(r.ip, rinfo.address);
         const key = `${r.deviceId}:${r.port}`;
         if (!found.has(key)) found.set(key, { deviceId: r.deviceId, name: r.name, room: r.room, ip, port: r.port });
         if (room) finish(); // 精确加入拿到第一个响应即可

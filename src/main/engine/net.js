@@ -85,4 +85,34 @@ function localAddresses() {
   return lanInterfaces().map((i) => ({ name: i.name, address: i.address }));
 }
 
-module.exports = { lanInterfaces, broadcastTargets, unicastProbeTargets, isPrivateAddress, localAddresses, ipToLong, longToIp };
+/**
+ * 房主应答 UDP 发现时应该回自己的地址，而不是把提问方的地址回显回去。
+ * 优先选与提问方同 /24 网段的私网地址（提问方一定路由可达），其次取第一块真实网卡。
+ */
+function pickLanAddress(peerAddress) {
+  const peerLong = ipToLong(peerAddress);
+  if (peerLong !== null && (peerLong >>> 24) === 127) return '127.0.0.1'; // 本机回环来源
+  const list = lanInterfaces().filter((i) => isPrivateAddress(i.address) && i.metric < 4);
+  if (peerLong !== null) {
+    const base = peerLong & 0xffffff00;
+    const same = list.find((i) => {
+      const own = ipToLong(i.address);
+      return own !== null && (own & 0xffffff00) === base;
+    });
+    if (same) return same.address;
+  }
+  return list.length ? list[0].address : String(peerAddress);
+}
+
+/**
+ * 加入方解析房主 IP：UDP 回包的来源地址（packetIp）是房主在这条路上一定可达的地址，
+ * 永远优先；只有来源不可信（非私网）时才退回房主自报的 replyIp。
+ * v1.0.0/1.0.1 的房主会把提问方 IP 回显进 replyIp，不能采信。
+ */
+function resolveHostIp(replyIp, packetIp) {
+  if (isPrivateAddress(packetIp)) return packetIp;
+  if (replyIp && replyIp !== '0.0.0.0' && isPrivateAddress(replyIp)) return replyIp;
+  return packetIp;
+}
+
+module.exports = { lanInterfaces, broadcastTargets, unicastProbeTargets, isPrivateAddress, localAddresses, pickLanAddress, resolveHostIp, ipToLong, longToIp };

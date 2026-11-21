@@ -222,7 +222,7 @@
 
   <section class="card">
     <h2>校验和（sha256）</h2>
-    <p class="hint">下载后可以先比对再安装，例如 <span class="mono">shasum -a 256 SkyDrop-1.0.1-arm64.dmg</span>（Windows：<span class="mono">certutil -hashfile 文件名 SHA256</span>）。</p>
+    <p class="hint">下载后可以先比对再安装，例如 <span class="mono">shasum -a 256 SkyDrop-1.0.2-arm64.dmg</span>（Windows：<span class="mono">certutil -hashfile 文件名 SHA256</span>）。</p>
     <div id="sums" style="display:grid; gap:10px"></div>
   </section>
 
@@ -233,22 +233,22 @@
 </div>
 
 <script>
-  var BASE = 'https://github.com/zhengwenyi2026-alt/-/releases/download/v1.0.1/';
+  var BASE = 'https://github.com/zhengwenyi2026-alt/-/releases/download/v1.0.2/';
   var FILES = [
-    { name: 'SkyDrop-1.0.1-arm64.dmg', size: '108.4 MB', label: 'Apple Silicon Mac（M1/M2/M3/M4）', os: 'mac', arch: 'arm64', kind: 'dmg',
-      sum: 'ea5a8b74f0ba516f2168e0cdd90d1b38037ee3709373f019456e6c2be46276cd' },
-    { name: 'SkyDrop-1.0.1-x64.dmg', size: '111.2 MB', label: 'Intel Mac', os: 'mac', arch: 'x64', kind: 'dmg',
-      sum: '0ba27fcde4a0e3102a5b42904808872aa2a791443adef25fb6fdbb20dd7acad2' },
-    { name: 'SkyDrop-1.0.1-arm64.zip', size: '112.9 MB', label: 'Mac 免挂载（解压即得 .app）', os: 'mac', arch: 'arm64', kind: 'zip',
-      sum: 'e40e30bfab73738cdb19088148ba1e5a13b242eb744b32642e319c6c0caba83c' },
-    { name: 'SkyDrop-Setup-1.0.1-x64.exe', size: '116.1 MB', label: 'Windows 10/11 安装版', os: 'win', arch: 'x64', kind: 'exe',
-      sum: '502e2d0d55f6b0779eecc7b2455f66a812fe9324d721c7336358b6004599940f' },
-    { name: 'SkyDrop-Setup-1.0.1-arm64.exe', size: '110.5 MB', label: 'Windows ARM64 安装版（骁龙笔记本等）', os: 'win', arch: 'arm64', kind: 'exe',
-      sum: 'f0089bba0d11894e875e1f7a7d32de1cd3f91334de9c1fd4149c2e304d51c507' },
-    { name: 'SkyDrop-Portable-1.0.1-x64.exe', size: '105.5 MB', label: 'Windows 免安装单文件', os: 'win', arch: 'x64', kind: 'portable',
-      sum: 'ecc8632c8783d06801a189c6afcc3ca8e5d84f9a738d7c13bbb918cd15bbd6f5' },
-    { name: 'SkyDrop-Portable-1.0.1-arm64.exe', size: '100.6 MB', label: 'Windows ARM64 免安装单文件', os: 'win', arch: 'arm64', kind: 'portable',
-      sum: 'a3297eb65e1a5fe3d845ad2cea784f25fe2e010d494e1c0ad293bf4ca34d0768' }
+    { name: 'SkyDrop-1.0.2-arm64.dmg', size: '108.4 MB', label: 'Apple Silicon Mac（M1/M2/M3/M4）', os: 'mac', arch: 'arm64', kind: 'dmg',
+      sum: 'c8dc0d923f463d995f45239a1469c5015d4d6c65c52364050206981aac49b46f' },
+    { name: 'SkyDrop-1.0.2-x64.dmg', size: '111.2 MB', label: 'Intel Mac', os: 'mac', arch: 'x64', kind: 'dmg',
+      sum: '5e19f1ee5a2e58e5b7e99f39f423b13f7538884dd19466a90dfcb1af80f4b1c5' },
+    { name: 'SkyDrop-1.0.2-arm64.zip', size: '112.9 MB', label: 'Mac 免挂载（解压即得 .app）', os: 'mac', arch: 'arm64', kind: 'zip',
+      sum: '7833cb077a0df2d0001b0dddf1f5f9695c243058ab57af3b5b3ca850257125b0' },
+    { name: 'SkyDrop-Setup-1.0.2-x64.exe', size: '116.1 MB', label: 'Windows 10/11 安装版', os: 'win', arch: 'x64', kind: 'exe',
+      sum: 'e561d906fa6ff4fb75156102e916ac0c0fb8a8c570343009ebc13a0ab5fa0f94' },
+    { name: 'SkyDrop-Setup-1.0.2-arm64.exe', size: '110.5 MB', label: 'Windows ARM64 安装版（骁龙笔记本等）', os: 'win', arch: 'arm64', kind: 'exe',
+      sum: '5039744d0b0426fae5002cd58aa736d4b28a58c1e40d7e873a06c30c6c5706eb' },
+    { name: 'SkyDrop-Portable-1.0.2-x64.exe', size: '105.5 MB', label: 'Windows 免安装单文件', os: 'win', arch: 'x64', kind: 'portable',
+      sum: '0cf8f6dd830fe4b8259d14a9a8a7bb63276332d71208bc53d783d25a47779689' },
+    { name: 'SkyDrop-Portable-1.0.2-arm64.exe', size: '100.6 MB', label: 'Windows ARM64 免安装单文件', os: 'win', arch: 'arm64', kind: 'portable',
+      sum: 'efdbeb23ff8b3bbb33a0d7c2e03dd402cd3b627187ae3b764561aa5d43013e61' }
   ];
 
   function url(name) { return BASE + encodeURIComponent(name); }

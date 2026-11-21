@@ -54,6 +54,7 @@ win:
         - x64
 
 nsis:
+  include: build/installer.nsh
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
@@ -63,4 +64,4 @@ nsis:
   deleteAppDataOnUninstall: false
 
 portable:
-  artifactName: ${productName}-便携版-${version}.${ext}
+  artifactName: ${productName}-便携版-${version}-${arch}.${ext}

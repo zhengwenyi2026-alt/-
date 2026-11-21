@@ -50,8 +50,11 @@
             <p class="hint relaynote" id="relayNote" hidden></p>
             <details id="manualDetail">
               <summary data-i18n="连不上？手动输入地址">连不上？手动输入地址</summary>
-              <code id="roomHint">—</code>
-              <p class="hint" data-i18n="跨网段或 VPN 下，对方可在「加入房间 → 高级」里粘贴上面的地址。">跨网段或 VPN 下，对方可在「加入房间 → 高级」里粘贴上面的地址。</p>
+              <div class="addrrow">
+                <code id="roomHint">—</code>
+                <button class="linkbtn" id="copyAddrBtn" data-i18n="复制">复制</button>
+              </div>
+              <p class="hint" data-i18n="局域网找不到房间时，把上面的地址发给对方，在「加入房间 → 高级」里粘贴即可直连。">局域网找不到房间时，把上面的地址发给对方，在「加入房间 → 高级」里粘贴即可直连。</p>
             </details>
             <div class="peers" id="hostPeers"></div>
             <button class="ghost small danger" id="closeRoomBtn" data-i18n="关闭房间">关闭房间</button>
@@ -160,6 +163,18 @@
           </div>
           <div id="historyList" class="historylist"><p class="hint" data-i18n="还没有完成过的传输。">还没有完成过的传输。</p></div>
         </div>
+
+        <div class="card" id="textCard">
+          <h2><span data-i18n="4 · 传送文本">4 · 传送文本</span><span data-i18n="输入文本发给对方；收到的文本在下方一键复制">输入文本发给对方；收到的文本在下方一键复制</span></h2>
+          <textarea id="textInput" rows="3" spellcheck="false" placeholder="输入要传送的文本…" data-i18n-placeholder="输入要传送的文本…" data-i18n-aria="要传送的文本" aria-label="要传送的文本"></textarea>
+          <div class="sendrow">
+            <button class="primary" id="sendTextBtn" disabled data-i18n="仅文本发送">仅文本发送</button>
+            <button class="ghost" id="sendTextFileBtn" disabled data-i18n="生成 TXT 发送">生成 TXT 发送</button>
+            <span class="send-summary" id="textSummary" data-i18n="对方文本栏直接显示，无需确认">对方文本栏直接显示，无需确认</span>
+            <button class="linkbtn" id="clearTextsBtn" data-i18n="清空文本">清空文本</button>
+          </div>
+          <div id="textList" class="historylist"><p class="hint" data-i18n="还没有传送过的文本。">还没有传送过的文本。</p></div>
+        </div>
       </section>
     </main>
   </div>
@@ -188,6 +203,15 @@
       <label class="switch"><input type="checkbox" id="setAutoAccept" /><span data-i18n="自动接收文件（不再逐个确认）">自动接收文件（不再逐个确认）</span></label>
       <label class="switch"><input type="checkbox" id="setAutoApprove" /><span data-i18n="自动允许房间码正确的设备加入">自动允许房间码正确的设备加入</span></label>
       <label class="switch"><input type="checkbox" id="setAllowPublic" /><span data-i18n="允许非私网地址连接（跨网段 / VPN 场景）">允许非私网地址连接（跨网段 / VPN 场景）</span></label>
+      <div class="field">
+        <span data-i18n="本机传输面板">本机传输面板</span>
+        <div class="row">
+          <input id="panelUrlInput" readonly data-i18n-aria="本机传输面板地址" aria-label="本机传输面板地址" />
+          <button class="ghost small" id="panelCopyBtn" data-i18n="复制">复制</button>
+          <button class="ghost small" id="panelOpenBtn" data-i18n="打开">打开</button>
+        </div>
+        <span class="muted" data-i18n="在本机浏览器打开这个地址，可以看到实时进度、速率、文件明细与历史记录；只有这台电脑自己能访问。">在本机浏览器打开这个地址，可以看到实时进度、速率、文件明细与历史记录；只有这台电脑自己能访问。</span>
+      </div>
       <div class="sheet-foot">
         <span class="muted" id="aboutText">—</span>
         <button class="primary" id="settingsClose" data-i18n="完成">完成</button>

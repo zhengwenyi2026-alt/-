@@ -268,6 +268,9 @@ function probeRelay({ input, provider = 'cloudflare', code, timeoutMs = 8000 }) 
 
 module.exports = {
   RELAY_SLOTS,
+  RELAY_PING,
+  RELAY_BACKOFF,
+  PAIR_TIMEOUT,
   RELAY_PROVIDERS,
   parseRelayBase,
   relaySocketUrl,

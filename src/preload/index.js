@@ -17,11 +17,19 @@ const api = {
   approveJoin: (deviceId, approve) => ipcRenderer.invoke('skydrop:approve-join', String(deviceId || ''), Boolean(approve)),
   respondOffer: (offerId, approve) => ipcRenderer.invoke('skydrop:respond-offer', String(offerId || ''), Boolean(approve)),
   send: (peerIds, paths) => ipcRenderer.invoke('skydrop:send', { peerIds, paths }),
+  sendText: (payload) =>
+    ipcRenderer.invoke('skydrop:send-text', {
+      peerIds: Array.isArray(payload && payload.peerIds) ? payload.peerIds.map(String) : [],
+      text: String((payload && payload.text) || ''),
+      asFile: Boolean(payload && payload.asFile),
+    }),
+  clearTexts: () => ipcRenderer.invoke('skydrop:clear-texts'),
   preview: (paths) => ipcRenderer.invoke('skydrop:preview', paths),
   pick: () => ipcRenderer.invoke('skydrop:pick'),
   pickSaveDir: () => ipcRenderer.invoke('skydrop:pick-save-dir'),
   setSettings: (patch) => ipcRenderer.invoke('skydrop:settings', patch),
   reveal: (p) => ipcRenderer.invoke('skydrop:reveal', String(p || '')),
+  openPanel: () => ipcRenderer.invoke('skydrop:open-panel'),
   openSaveDir: () => ipcRenderer.invoke('skydrop:open-save-dir'),
   copy: (text) => ipcRenderer.send('skydrop:copy', String(text || '')),
   pathForFile: (file) => {

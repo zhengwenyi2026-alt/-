@@ -129,6 +129,7 @@
 
   <p class="pitch">
     把文件拖进窗口，按<b>「开始传送」</b>，文件就出现在对方电脑的下载目录里——体验对齐苹果「隔空投送」，但 <b>Mac 和 Windows 之间也能互传</b>。
+    也可以不传文件、直接发文字：第 4 步输入文本，<b>「仅文本发送」</b>即时出现在对方的文本栏一键复制，<b>「生成 TXT 发送」</b>则像普通文件一样落到对方目录。
     一台设备点「创建房间」拿到 6 位房间码，另一台输入房间码即可连接。<b>局域网内不经过任何服务器，文件不出你的路由器</b>；
     两台设备不在同一个网络时，还能挂一个自己的中继跨网段传输。
   </p>
@@ -150,7 +151,7 @@
     </table>
     <p class="hint" style="margin-top:12px">
       不确定选哪个？Mac 按「关于本机 → 芯片」判断：Apple M 系列选 <span class="mono">arm64</span>，Intel 选 <span class="mono">x64</span>；
-      Windows 一律用 <span class="mono">Setup-…x64.exe</span>（想要免安装就选 <span class="mono">Portable</span>）。
+      Windows 一般用 <span class="mono">Setup-…x64.exe</span>（骁龙等 ARM 笔记本选 <span class="mono">arm64</span>；想要免安装就选 <span class="mono">Portable</span>）。
       下载文件名用的是应用的英文名 SkyDrop，安装完成后开始菜单与「应用程序」里的名字是<b>「隔空传」</b>，是同一个应用。
     </p>
   </section>
@@ -161,7 +162,7 @@
       <p><b>macOS</b>：安装包未做开发者证书签名与公证，Gatekeeper 会拦一次。任选一种放行：访达里<b>右键（按住 Control 点击）→ 打开 → 打开</b>；或「系统设置 → 隐私与安全性」底部点「仍要打开」；或终端执行</p>
       <p class="mono">xattr -dr com.apple.quarantine "/Applications/隔空传.app"</p>
       <p><b>Windows</b>：SmartScreen 提示「Windows 已保护你的电脑」→ 点<b>更多信息 → 仍要运行</b>。</p>
-      <p><b>防火墙</b>：第一次传输时 macOS 会问「是否允许接收传入网络连接」→ 点<b>允许</b>；Windows 弹窗勾选<b>专用网络</b>即可，不需要放开公用网络。</p>
+      <p><b>防火墙</b>：Windows 安装版会在安装时请求一次管理员权限（UAC），自动添加防火墙放行规则，之后不再弹窗；便携版没有这一步，第一次传输时弹窗勾选<b>专用网络</b>即可。macOS 第一次传输时会问「是否允许接收传入网络连接」→ 点<b>允许</b>。</p>
     </div>
   </section>
 
@@ -172,7 +173,21 @@
       <li>发送方<b>输入房间码加入</b>，也可以点「扫描附近房间」直接选，或在「高级」里手填 <span class="mono">IP:端口</span>。</li>
       <li>主机点<b>「允许」</b>，发送方把文件或文件夹拖进窗口、点<b>「开始传送」</b>，接收方点<b>「接收」</b>，文件落到 <span class="mono">~/Downloads/隔空传</span>（Windows 为 <span class="mono">%USERPROFILE%\Downloads\隔空传</span>）。</li>
     </ul>
-    <p class="hint">房间是双向通道，连上之后任何一方都能发；一个房间最多 8 台设备。文件夹会保留目录层级递归传输，同名文件不会覆盖（自动改成 <span class="mono">报告 (1).pdf</span>）。</p>
+    <p class="hint">房间是双向通道，连上之后任何一方都能发；一个房间最多 8 台设备。文件夹会保留目录层级递归传输，同名文件不会覆盖（自动改成 <span class="mono">报告 (1).pdf</span>）。
+    连上之后还能发文字：在「4 · 传送文本」里输入，<b>仅文本发送</b>直接显示在对方的文本栏（每条上限 32 KB，行内一键复制），<b>生成 TXT 发送</b>则走普通文件流程落成一个 <span class="mono">.txt</span>。</p>
+  </section>
+
+  <section class="card">
+    <h2>本机传输面板</h2>
+    <p>应用启动时会额外开一个<b>只监听 <span class="mono">127.0.0.1</span></b> 的网页，设置里那一行「本机传输面板地址」就是它（默认 <span class="mono">http://localhost:47830/</span>，端口被占用时顺延；房间的数据端口 <span class="mono">http://localhost:47810/</span> 打开也是同一份页面）。用这台电脑自己的浏览器打开，能看到比窗口更密的数据：</p>
+    <ul class="feats">
+      <li><b>传输任务</b>每条在传任务的方向、对端、状态、进度百分比、已传 / 总大小、实时速率、剩余时间、已用时间、任务号、保存位置、总进度条，展开后是<b>逐文件明细</b>（文件名、大小、已传、进度、排队中 / 接收中 / 完成 / 出错）。</li>
+      <li><b>概览与设备</b>应用版本与平台、运行时长、本机各网卡地址、保存目录、各开关状态、房间码与数据端口、跨网中继状态、已连接设备与其连接方式、等待确认的加入请求、附近房间。</li>
+      <li><b>历史与统计</b>最近 60 条已完成任务（时间、方向、对端、文件数、大小、结果、保存位置），累计收发字节与文件数、完成 / 失败 / 被拒绝计数、峰值速率、进行中任务；另有<b>传送的文本</b>表（时间、方向、对端、大小、预览，行内「复制」按钮）。</li>
+      <li><b>协议与参数</b>协议版本、分片大小与帧头、并发分片、单任务文件上限、单条文本上限、房间人数上限、房间码长度与字符集、错误码封禁阈值、发现端口、数据端口范围、面板端口、中继槽位 / 心跳 / 配对超时 / 重连退避。</li>
+      <li><b>5 种语言 + 暂停刷新</b>右上角语言下拉默认跟随应用内语言，选过一次后记在浏览器里、只影响这个页面；「暂停刷新」冻结当前画面，方便盯住某一瞬间或截图。</li>
+    </ul>
+    <p class="hint">这个页面<b>只有这台电脑自己能访问</b>：面板端口从没监听网卡地址，局域网里其它设备打不开；房间数据端口虽然绑 <span class="mono">0.0.0.0</span>（文件传输需要），但对非本机来源仍然只返回 <span class="mono">404</span>，伪造 <span class="mono">Host</span> 头也会被拒。页面不加载任何外部资源，只读——不能从网页上发起传输、批准加入或改设置。数据全在内存，重启应用即清空。</p>
   </section>
 
   <section class="card">
@@ -190,6 +205,7 @@
       <li><b>房间码抗暴力</b>6 位 × 32 字符集约 10 亿种组合，同一来源连续输错 8 次直接拉黑。</li>
       <li><b>路径穿越防护</b>文件名与相对路径剔除 <span class="mono">..</span>、绝对路径、Windows 保留名与控制字符，落盘前再做 <span class="mono">realpath</span> 校验。</li>
       <li><b>只接受私网地址</b>局域网模式默认拒绝公网来源直连，「允许公网地址」是另一个需要单独勾选的开关。</li>
+      <li><b>面板只给本机</b>传输记录里含文件名与保存路径，所以本机传输面板要求「来源地址是回环 + <span class="mono">Host</span> 头是本机名字」两个条件同时成立，页面 CSP 禁掉一切外部脚本，动态内容只用 <span class="mono">textContent</span> 写入。</li>
       <li><b>5 种界面语言</b>简体中文 / 繁體中文 / English / 日本語 / 한국어，跟随系统语言，界面里即时切换、无需重启。</li>
       <li><b>零依赖</b>打包成自包含的 <span class="mono">.dmg</span> / <span class="mono">.exe</span>，双击即用，不需要装 Node 或 Python。</li>
     </ul>
@@ -206,7 +222,7 @@
 
   <section class="card">
     <h2>校验和（sha256）</h2>
-    <p class="hint">下载后可以先比对再安装，例如 <span class="mono">shasum -a 256 SkyDrop-1.0.0-arm64.dmg</span>（Windows：<span class="mono">certutil -hashfile 文件名 SHA256</span>）。</p>
+    <p class="hint">下载后可以先比对再安装，例如 <span class="mono">shasum -a 256 SkyDrop-1.0.1-arm64.dmg</span>（Windows：<span class="mono">certutil -hashfile 文件名 SHA256</span>）。</p>
     <div id="sums" style="display:grid; gap:10px"></div>
   </section>
 
@@ -217,18 +233,22 @@
 </div>
 
 <script>
-  var BASE = 'https://github.com/zhengwenyi2026-alt/-/releases/download/v1.0.0/';
+  var BASE = 'https://github.com/zhengwenyi2026-alt/-/releases/download/v1.0.1/';
   var FILES = [
-    { name: 'SkyDrop-1.0.0-arm64.dmg', size: '108.5 MB', label: 'Apple Silicon Mac（M1/M2/M3/M4）', os: 'mac', arch: 'arm64', kind: 'dmg',
-      sum: 'db68ea76a85981e2603ddcb07157bd58ee28e49af3849caa097255ec8f0cf807' },
-    { name: 'SkyDrop-1.0.0-x64.dmg', size: '111.1 MB', label: 'Intel Mac', os: 'mac', arch: 'x64', kind: 'dmg',
-      sum: 'f2b8776bbf07dba38a7b29f7eb45323e246cc9f3b975aa834594a90826c74400' },
-    { name: 'SkyDrop-1.0.0-arm64.zip', size: '112.8 MB', label: 'Mac 免挂载（解压即得 .app）', os: 'mac', arch: 'arm64', kind: 'zip',
-      sum: '278ab994878511ec2d477a4229206a49b8400857cd87817802391a3a74c15853' },
-    { name: 'SkyDrop-Setup-1.0.0-x64.exe', size: '116.1 MB', label: 'Windows 10/11 安装版', os: 'win', arch: 'x64', kind: 'exe',
-      sum: 'b061f00616aab1534ec4c255d9e98dbe6e83e16b6559f1a87dae9a1f555e9b77' },
-    { name: 'SkyDrop-Portable-1.0.0.exe', size: '105.5 MB', label: 'Windows 免安装单文件', os: 'win', arch: 'x64', kind: 'portable',
-      sum: 'c1ed3ddd24f9feb8a570797e0f7248d0656e1e71c90e01aac57efa26ee12f8d1' }
+    { name: 'SkyDrop-1.0.1-arm64.dmg', size: '108.4 MB', label: 'Apple Silicon Mac（M1/M2/M3/M4）', os: 'mac', arch: 'arm64', kind: 'dmg',
+      sum: 'ea5a8b74f0ba516f2168e0cdd90d1b38037ee3709373f019456e6c2be46276cd' },
+    { name: 'SkyDrop-1.0.1-x64.dmg', size: '111.2 MB', label: 'Intel Mac', os: 'mac', arch: 'x64', kind: 'dmg',
+      sum: '0ba27fcde4a0e3102a5b42904808872aa2a791443adef25fb6fdbb20dd7acad2' },
+    { name: 'SkyDrop-1.0.1-arm64.zip', size: '112.9 MB', label: 'Mac 免挂载（解压即得 .app）', os: 'mac', arch: 'arm64', kind: 'zip',
+      sum: 'e40e30bfab73738cdb19088148ba1e5a13b242eb744b32642e319c6c0caba83c' },
+    { name: 'SkyDrop-Setup-1.0.1-x64.exe', size: '116.1 MB', label: 'Windows 10/11 安装版', os: 'win', arch: 'x64', kind: 'exe',
+      sum: '502e2d0d55f6b0779eecc7b2455f66a812fe9324d721c7336358b6004599940f' },
+    { name: 'SkyDrop-Setup-1.0.1-arm64.exe', size: '110.5 MB', label: 'Windows ARM64 安装版（骁龙笔记本等）', os: 'win', arch: 'arm64', kind: 'exe',
+      sum: 'f0089bba0d11894e875e1f7a7d32de1cd3f91334de9c1fd4149c2e304d51c507' },
+    { name: 'SkyDrop-Portable-1.0.1-x64.exe', size: '105.5 MB', label: 'Windows 免安装单文件', os: 'win', arch: 'x64', kind: 'portable',
+      sum: 'ecc8632c8783d06801a189c6afcc3ca8e5d84f9a738d7c13bbb918cd15bbd6f5' },
+    { name: 'SkyDrop-Portable-1.0.1-arm64.exe', size: '100.6 MB', label: 'Windows ARM64 免安装单文件', os: 'win', arch: 'arm64', kind: 'portable',
+      sum: 'a3297eb65e1a5fe3d845ad2cea784f25fe2e010d494e1c0ad293bf4ca34d0768' }
   ];
 
   function url(name) { return BASE + encodeURIComponent(name); }

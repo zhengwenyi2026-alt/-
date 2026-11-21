@@ -36,6 +36,7 @@ function applyStatic() {
   for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.getAttribute('data-i18n'));
   for (const node of document.querySelectorAll('[data-i18n-title]')) node.title = t(node.getAttribute('data-i18n-title'));
   for (const node of document.querySelectorAll('[data-i18n-aria]')) node.setAttribute('aria-label', t(node.getAttribute('data-i18n-aria')));
+  for (const node of document.querySelectorAll('[data-i18n-placeholder]')) node.setAttribute('placeholder', t(node.getAttribute('data-i18n-placeholder')));
   renderLangList();
 }
 
@@ -130,7 +131,11 @@ function scheduleRender() {
 function toast(msg, level = 'info') {
   if (!msg) return;
   const box = $('toasts');
+  // 同一条消息在展示期间只弹一次：加入失败会同时走 join-error 事件和 IPC 返回值，两条一模一样
+  const last = box.lastElementChild;
+  if (last && last.dataset.msg === msg) return;
   const node = el('div', `toast ${level === 'error' ? 'error' : level === 'warn' ? 'warn' : level === 'success' ? 'success' : ''}`, msg);
+  node.dataset.msg = msg;
   box.appendChild(node);
   setTimeout(() => {
     node.style.transition = 'opacity .3s ease';
@@ -175,6 +180,7 @@ function render() {
   renderSend(st);
   renderActive(st);
   renderHistory(st);
+  renderTexts(st);
   renderRequests(st);
 }
 
@@ -362,6 +368,16 @@ function renderSend(st) {
     : t('未选择文件');
   $('sendBtn').disabled = !S.picked.length || !peers.length || !S.selected.size;
   $('clearBtn').disabled = !S.picked.length;
+  updateTextButtons();
+}
+
+/** 文本发送按钮跟随「有内容 + 有已连接设备」两个条件 */
+function updateTextButtons() {
+  const has = Boolean($('textInput') && $('textInput').value.trim());
+  const peers = (S.state && S.state.peers) || [];
+  const disabled = !has || !peers.length;
+  if ($('sendTextBtn')) $('sendTextBtn').disabled = disabled;
+  if ($('sendTextFileBtn')) $('sendTextFileBtn').disabled = disabled;
 }
 
 function renderActive(st) {
@@ -442,6 +458,39 @@ function renderHistory(st) {
       btn.addEventListener('click', () => call(api.reveal(target)));
       row.appendChild(btn);
     }
+    box.appendChild(row);
+  }
+}
+
+function renderTexts(st) {
+  const box = $('textList');
+  clear(box);
+  const items = st.texts || [];
+  if (!items.length) {
+    box.appendChild(hint(t('还没有传送过的文本。')));
+    return;
+  }
+  for (const x of items.slice(0, 30)) {
+    const row = el('div', 'hist text-item');
+    row.appendChild(el('span', `dir ${x.dir}`, x.dir === 'in' ? '↓' : '↑'));
+    const txt = el('div', 'txt');
+    txt.appendChild(
+      el('b', null, `${x.dir === 'in' ? t('收到') : t('发出')} ${x.peerName || ''} · ${fmtBytes(x.size)} · ${fmtTime(x.at)}`)
+    );
+    const body = el('p', 'textbody', x.text.length > 400 ? `${x.text.slice(0, 400)}…` : x.text);
+    body.title = t('点击展开完整文本');
+    body.addEventListener('click', () => {
+      body.classList.toggle('expanded');
+      body.classList.contains('expanded') ? body.replaceChildren(x.text) : body.replaceChildren(x.text.length > 400 ? `${x.text.slice(0, 400)}…` : x.text);
+    });
+    txt.appendChild(body);
+    row.appendChild(txt);
+    const btn = el('button', 'linkbtn', t('复制'));
+    btn.addEventListener('click', () => {
+      api.copy(x.text);
+      toast(t('已复制文本'), 'success');
+    });
+    row.appendChild(btn);
     box.appendChild(row);
   }
 }
@@ -538,6 +587,13 @@ function bindStatic() {
     api.copy(code);
     toast(t('已复制房间码 {code}', { code }), 'success');
   });
+  $('copyAddrBtn').addEventListener('click', () => {
+    // connectHint 可能是多块网卡用顿号连起来的，直连只认单个 IP:端口，取第一块网卡的
+    const addr = ($('roomHint').textContent || '').split('、')[0].trim();
+    if (!addr || addr === '—') return;
+    api.copy(addr);
+    toast(t('已复制'), 'success');
+  });
   $('joinBtn').addEventListener('click', () => doJoin());
   $('joinRelayBtn').addEventListener('click', () => {
     const r = S.state && S.state.relay;
@@ -599,6 +655,34 @@ function bindStatic() {
       S.picked = [];
       toast(t('已发起传送：{n} 个文件', { n: res.count }), 'success');
     }
+    await refresh();
+  });
+  const doSendText = async (asFile) => {
+    const text = $('textInput').value;
+    if (!text.trim()) {
+      toast(t('文本内容为空'), 'warn');
+      return;
+    }
+    const res = await call(api.sendText({ peerIds: [...S.selected], text, asFile }));
+    if (res) {
+      $('textInput').value = '';
+      updateTextButtons();
+      toast(asFile ? t('已生成 TXT 并发起传送') : t('文本已发送'), 'success');
+    }
+    await refresh();
+  };
+  $('sendTextBtn').addEventListener('click', () => doSendText(false));
+  $('sendTextFileBtn').addEventListener('click', () => doSendText(true));
+  $('textInput').addEventListener('input', updateTextButtons);
+  $('textInput').addEventListener('keydown', (e) => {
+    // Cmd/Ctrl+Enter 直接发纯文本，与文件传送的快捷键区分开
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      doSendText(false);
+    }
+  });
+  $('clearTextsBtn').addEventListener('click', async () => {
+    await call(api.clearTexts());
     await refresh();
   });
   $('openSaveDirBtn').addEventListener('click', () => call(api.openSaveDir()));
@@ -677,6 +761,15 @@ function bindStatic() {
     if (dir) $('setDirInput').value = dir;
     await refresh();
   });
+  $('panelCopyBtn').addEventListener('click', () => {
+    const url = S.state && S.state.panel ? S.state.panel.url : '';
+    if (!url) return;
+    api.copy(url);
+    toast(t('已复制面板地址'), 'success');
+  });
+  $('panelOpenBtn').addEventListener('click', async () => {
+    await call(api.openPanel());
+  });
   for (const id of ['setAutoAccept', 'setAutoApprove', 'setAllowPublic', 'setRelayEnabled', 'setRelayProvider']) {
     $(id).addEventListener('change', async () => {
       await call(api.setSettings(settingsPatch()));
@@ -754,6 +847,7 @@ function syncSettingsInputs(st) {
   $('setAutoAccept').checked = Boolean(st.settings.autoAccept);
   $('setAutoApprove').checked = Boolean(st.settings.autoApprove);
   $('setAllowPublic').checked = Boolean(st.settings.allowPublic);
+  if (st.panel && document.activeElement !== $('panelUrlInput')) $('panelUrlInput').value = st.panel.url;
   $('setRelayEnabled').checked = Boolean(st.settings.relayEnabled);
   if (document.activeElement !== $('setRelayUrl')) $('setRelayUrl').value = st.settings.relayUrl || '';
   if (document.activeElement !== $('setRelayProvider')) {
@@ -774,7 +868,7 @@ api.onEvent((e) => {
       toast(t(e.msg, e.params), e.level);
       break;
     case 'join-error':
-      toast(t(e.msg), 'error');
+      toast(t(e.msg, e.params), 'error');
       break;
     case 'offer-in':
       toast(t('{name} 想发送 {n} 个文件', { name: e.offer.peerName, n: e.offer.files.length }));

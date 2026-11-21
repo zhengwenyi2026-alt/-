@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const dgram = require('dgram');
+const fsp = require('fs/promises');
 const http = require('http');
 const os = require('os');
 const path = require('path');
@@ -11,12 +12,14 @@ const WebSocket = require('ws');
 const { Peer } = require('./peer');
 const I18N = require('../../common/i18n');
 const { parseRelayBase, dialRelay, openRelaySlots } = require('./relay');
-const { CHUNK_SIZE, PROTO_VERSION } = require('./protocol');
+const { CHUNK_SIZE, PROTO_VERSION, MAX_TEXT_BYTES } = require('./protocol');
 const { generateRoomCode, normalizeRoomCode, formatRoomCode } = require('./roomCode');
-const { lanInterfaces, broadcastTargets, isPrivateAddress } = require('./net');
+const { lanInterfaces, broadcastTargets, unicastProbeTargets, isPrivateAddress } = require('./net');
 const { collectItems } = require('./files');
+const { dashboardHandler, startPanelServer } = require('./dashboard');
 
 const TCP_BASE_PORT = 47810; // 房间数据端口，被占用时向后顺延
+const TCP_PORT_SPAN = 13; // 顺延上限，见 _listenTcp
 const UDP_PORT = 47812; // 局域网发现端口（固定，房间码查询走这里）
 const MULTICAST_GROUP = '239.255.47.81';
 const MAGIC = 'skydrop1';
@@ -24,6 +27,8 @@ const MAX_PEERS = 8;
 const HELLO_TIMEOUT = 10_000;
 const APPROVE_TIMEOUT = 60_000;
 const MAX_BAD_CODE_PER_IP = 8;
+const HISTORY_KEEP = 60; // 传输记录保留条数
+const TEXTS_KEEP = 60; // 文本传送记录保留条数
 const RELAY_PROVIDERS = ['cloudflare', 'vercel', 'custom'];
 
 function formatBytes(n) {
@@ -60,16 +65,26 @@ class Hub extends EventEmitter {
     this.language = I18N.isSupported(opts.language) ? opts.language : I18N.DEFAULT_LANG;
 
     this.room = null; // { code, port, status }
+    this.panel = null; // { server, port, url } 本机传输面板（仅 127.0.0.1）
+    this.startedAt = Date.now();
+    this.appVersion = String(opts.appVersion || '');
     this.peers = new Map(); // deviceId -> Peer
     this.joinRequests = new Map(); // deviceId -> { peer, name, ip }
     this.offers = new Map(); // offerId -> 传输任务
     this.visible = []; // 扫描到的附近房间
     this.outgoing = null; // 正在进行的加入请求
     this.history = [];
+    // 任务结束后 offers 里的记录会被删掉，面板的「峰值速率」需要一个活过单次任务的计数
+    this.peakRate = 0;
+    this.texts = []; // 文本传送记录（生成 txt 的那份走 history，不在这里重复）
+    this._textSeq = 0;
+    this._textFileSeq = 0;
 
     this._server = null;
     this._wss = null;
     this._udp = null;
+    // 测试可改用独立 UDP 端口，避免与机器上真实运行的实例（同样绑 47812）抢单播投递
+    this.udpPort = Number(opts.udpPort) > 0 ? Number(opts.udpPort) : UDP_PORT;
     this._badCodes = new Map();
     this._offerSeq = 0;
     this._disposed = false;
@@ -130,8 +145,32 @@ class Hub extends EventEmitter {
       joinRequests: [...this.joinRequests.entries()].map(([deviceId, r]) => ({ deviceId, name: r.name, ip: r.ip })),
       offers: [...this.offers.values()].map((o) => this._offerView(o)),
       history: this.history,
-      visible: this.visible,
+      texts: this.texts,
+      visible: this.visible.filter((r) => Date.now() - (r.at || 0) < 90_000), // 旧条目过期，别让「扫描到了」误导成还能加入
+      panel: this.panel ? { port: this.panel.port, url: this.panel.url } : null,
     };
+  }
+
+  /** 面板要展示但引擎内部才知道的常量，集中一处交给 dashboard，避免两边各写一遍数字 */
+  _dashboardLimits() {
+    return {
+      version: this.appVersion,
+      maxPeers: MAX_PEERS,
+      maxBadCodes: MAX_BAD_CODE_PER_IP,
+      historyKeep: HISTORY_KEEP,
+      udpPort: UDP_PORT,
+      tcpBasePort: TCP_BASE_PORT,
+      tcpPortSpan: TCP_PORT_SPAN,
+    };
+  }
+
+  /** 常驻本机面板：房间没开的时候也能看历史与设置，端口只绑 127.0.0.1 */
+  async startPanel() {
+    if (this.panel) return this.panel;
+    const panel = await startPanelServer(this, this._dashboardLimits());
+    if (!panel) return null;
+    this.panel = panel;
+    return panel;
   }
 
   _pushState() {
@@ -196,10 +235,7 @@ class Hub extends EventEmitter {
       let attempt = 0;
       const tryNext = () => {
         const port = TCP_BASE_PORT + attempt;
-        const server = http.createServer((req, res) => {
-          res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-          res.end('SkyDrop');
-        });
+        const server = http.createServer(dashboardHandler(this, this._dashboardLimits()));
         const wss = new WebSocket.Server({ noServer: true, maxPayload: CHUNK_SIZE + 4096 });
         server.on('upgrade', (req, socket, head) => {
           wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
@@ -358,7 +394,7 @@ class Hub extends EventEmitter {
     this.outgoing = { room: code, codeDisplay: formatRoomCode(code), status: 'discovering' };
     this._pushState();
 
-    const targets = await this._discover({ room: code, timeout: 2500 }).catch(() => []);
+    const targets = await this._discover({ room: code, timeout: 3000 }).catch(() => []);
     if (!this.outgoing) throw new Error('已取消加入');
     if (!targets.length) {
       this.outgoing = null;
@@ -367,10 +403,17 @@ class Hub extends EventEmitter {
         this.notice('局域网里没找到这个房间，改走中继加入', null, 'warn');
         return this.joinRelay(code);
       }
-      const err = new Error('局域网内没有找到这个房间，请确认两台设备连同一个 Wi-Fi');
-      this._emit({ type: 'join-error', msg: err.message });
+      // 「扫描列表里明明有、按码加入却失败」多半是房间重建过或抄错一位：
+      // 顺手再扫一遍，把当前实际开着的房间报出来，列表也顺势刷新
+      const nearby = await this._discover({ room: '', timeout: 1200 }).catch(() => []);
+      this.visible = nearby.map((r) => ({ ...r, at: Date.now() }));
+      const rooms = nearby.map((r) => `${r.room}（${r.name}）`).join('、');
+      const msg = nearby.length
+        ? '局域网内没有找到房间 {code}，附近现在开着：{rooms}——房间可能重建过或有一位抄错，点「重新扫描」从列表加入'
+        : '局域网内没有找到这个房间。请确认对方已点「创建房间」且防火墙放行本应用；若路由器拦广播，在「高级」里手填对方的 IP:端口';
+      this._emit({ type: 'join-error', msg, params: nearby.length ? { code: formatRoomCode(code), rooms } : undefined });
       this._pushState();
-      throw err;
+      throw new Error(msg);
     }
     this.outgoing = { room: code, codeDisplay: formatRoomCode(code), status: 'connecting', host: targets[0].name };
     this._pushState();
@@ -636,6 +679,7 @@ class Hub extends EventEmitter {
       }
       offer.bytes = offer.files.reduce((s, f) => s + (f.bytes || 0), 0);
       offer.rate = p.rate;
+      if (typeof p.rate === 'number' && p.rate > this.peakRate) this.peakRate = p.rate;
       offer.current = file ? file.name : offer.current;
       this._emit({ type: 'offer-progress', offer: this._offerView(offer) });
     });
@@ -678,6 +722,13 @@ class Hub extends EventEmitter {
     peer.on('protocol-error', (msg) => this.notice('传输失败：{msg}', { msg }, 'error'));
     peer.on('remote-error', (msg) => this.notice('对方报告：{msg}', { msg }, 'warn'));
     peer.on('error', (err) => this.notice('连接异常：{msg}', { msg: err.message }, 'error'));
+
+    peer.on('text-in', (rec) => {
+      this._pushText({ dir: 'in', peerName: peer.peerName, text: rec.text, size: rec.size });
+      this._emit({ type: 'text-in', text: this.texts[0] });
+      this.notice('收到 {name} 发来的文本', { name: peer.peerName });
+      this._pushState();
+    });
     return peer;
   }
 
@@ -692,15 +743,15 @@ class Hub extends EventEmitter {
     return new Promise((resolve) => {
       const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
       let settled = false;
-      const fail = () => {
+      // 只有绑定失败才算致命；绑定成功后发送应答出错绝不能把发现服务整个关掉
+      sock.once('error', () => {
         if (settled) return;
         settled = true;
         try {
           sock.close();
         } catch {}
         resolve(null);
-      };
-      sock.once('error', fail);
+      });
       sock.on('message', (msg, rinfo) => {
         if (!this.room) return;
         let q;
@@ -728,7 +779,9 @@ class Hub extends EventEmitter {
           sock.send(answer, rinfo.port, rinfo.address, () => {});
         } catch {}
       });
-      sock.bind(UDP_PORT, '0.0.0.0', () => {
+      sock.bind(this.udpPort, '0.0.0.0', () => {
+        sock.removeAllListeners('error');
+        sock.on('error', () => {}); // 对某块不可达路由回包失败之类的情况，静默丢弃这一发
         try {
           sock.setBroadcast(true);
           for (const iface of lanInterfaces()) {
@@ -758,22 +811,28 @@ class Hub extends EventEmitter {
     this._udp = null;
   }
 
-  /** 广播查询房间；room 为具体房间码时用于加入，为空串时用于扫描附近房间 */
-  _discover({ room = '', timeout = 1800 } = {}) {
+  /**
+   * 广播查询房间；room 为具体房间码时用于加入，为空串时用于扫描附近房间。
+   * targets 仅测试用：给了就只往这些地址发。广播若被路由器/AP 隔离拦掉，
+   * 会补第二轮广播并把真实网卡所在网段逐个单播探一遍（单播通常不受广播过滤影响）。
+   */
+  _discover({ room = '', timeout = 1800, targets = null } = {}) {
     return new Promise((resolve) => {
       const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
       const found = new Map();
       const query = Buffer.from(JSON.stringify({ m: MAGIC, a: 'find', proto: PROTO_VERSION, room, from: this.deviceName }));
       let closed = false;
+      const timers = [];
       const finish = () => {
         if (closed) return;
         closed = true;
+        for (const id of timers) clearTimeout(id);
         try {
           sock.close();
         } catch {}
         resolve([...found.values()]);
       };
-      sock.once('error', finish);
+      sock.on('error', () => {}); // 个别目标不可达只丢这一发，不中断整场发现
       sock.on('message', (msg, rinfo) => {
         let r;
         try {
@@ -793,17 +852,22 @@ class Hub extends EventEmitter {
         try {
           sock.setBroadcast(true);
         } catch {}
-        const targets = new Set([...broadcastTargets(), MULTICAST_GROUP]);
-        for (const t of targets) {
+        const list = targets || [...broadcastTargets(), MULTICAST_GROUP];
+        const send = (addr) => {
           try {
-            sock.send(query, UDP_PORT, t, () => {});
+            sock.send(query, this.udpPort, addr, () => {});
           } catch {}
-        }
-        // 本机自测兜底：同一台机器上开两个实例时广播可能收不到
-        try {
-          sock.send(query, UDP_PORT, '127.0.0.1', () => {});
-        } catch {}
-        setTimeout(finish, timeout);
+        };
+        for (const t of list) send(t);
+        if (!targets) send('127.0.0.1'); // 本机自测兜底：同一台机器上开两个实例时广播可能收不到
+        timers.push(
+          setTimeout(() => {
+            if (closed) return;
+            for (const t of list) send(t); // 补一轮广播，对丢包
+            if (!targets) for (const t of unicastProbeTargets()) send(t); // 单播扫网段
+          }, Math.min(900, Math.max(200, Math.floor(timeout / 3)))),
+          setTimeout(finish, timeout)
+        );
       });
     });
   }
@@ -812,7 +876,7 @@ class Hub extends EventEmitter {
   async scan() {
     this._emit({ type: 'scan', status: 'scanning' });
     const list = await this._discover({ room: '', timeout: 1800 });
-    this.visible = list;
+    this.visible = list.map((r) => ({ ...r, at: Date.now() }));
     this._emit({ type: 'scan', status: 'done', rooms: list });
     return list;
   }
@@ -835,6 +899,79 @@ class Hub extends EventEmitter {
     }
     this._pushState();
     return { count: items.length, bytes: total };
+  }
+
+  /**
+   * 传送文本。asFile=false 时作为控制帧即时推送（对方文本栏直接出现，无需确认）；
+   * asFile=true 时把文本落成一个临时 .txt 走普通文件管线，用户像收文件一样确认、
+   * 落盘，发送任务全部收尾后把临时文件删掉。
+   */
+  async sendText({ peerIds, text, asFile = false }) {
+    const body = String(text ?? '');
+    if (!body.trim()) throw new Error('文本内容为空');
+    if (asFile) return this._sendTextAsFile({ peerIds, text: body });
+    const ids = Array.isArray(peerIds) && peerIds.length ? peerIds : [...this.peers.keys()];
+    const targets = ids.map((id) => this.peers.get(id)).filter(Boolean);
+    if (!targets.length) throw new Error('还没有已连接的设备');
+    const size = Buffer.byteLength(body, 'utf8');
+    if (size > MAX_TEXT_BYTES) throw new Error('文本过长（超过 32 KB 上限）');
+    for (const peer of targets) {
+      try {
+        peer.sendText(body);
+        this._pushText({ dir: 'out', peerName: peer.peerName, text: body, size });
+      } catch (err) {
+        this.notice('发送给 {name} 失败：{msg}', { name: peer.peerName, msg: err.message }, 'error');
+      }
+    }
+    this._pushState();
+    return { count: targets.length, size };
+  }
+
+  async _sendTextAsFile({ peerIds, text }) {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    const name = `文本 ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}-${++this._textFileSeq}.txt`;
+    const dir = path.join(os.tmpdir(), 'skydrop-text');
+    await fsp.mkdir(dir, { recursive: true });
+    const tmp = path.join(dir, name);
+    await fsp.writeFile(tmp, text, 'utf8');
+    const before = new Set(this.offers.keys());
+    const result = await this.send({ peerIds, paths: [tmp] });
+    // 每台目标设备各有一个 offer；全部到达终态（完成、失败、被拒）后清理临时文件
+    const offerIds = [...this.offers.keys()].filter((id) => !before.has(id));
+    if (offerIds.length) this._unlinkAfterDone(offerIds, tmp);
+    else await fsp.rm(tmp, { force: true }).catch(() => {});
+    return result;
+  }
+
+  _unlinkAfterDone(offerIds, filePath) {
+    const pending = new Set(offerIds);
+    const onEvent = (e) => {
+      if (e.type !== 'offer-done' || !pending.has(e.offer.id)) return;
+      pending.delete(e.offer.id);
+      if (!pending.size) {
+        this.off('event', onEvent);
+        fsp.rm(filePath, { force: true }).catch(() => {});
+      }
+    };
+    this.on('event', onEvent);
+  }
+
+  _pushText({ dir, peerName, text, size }) {
+    this.texts.unshift({
+      id: `x${++this._textSeq}`,
+      dir,
+      peerName,
+      text,
+      size,
+      at: Date.now(),
+    });
+    this.texts = this.texts.slice(0, TEXTS_KEEP);
+  }
+
+  clearTexts() {
+    this.texts = [];
+    this._pushState();
   }
 
   respondOffer(offerId, ok) {
@@ -920,7 +1057,7 @@ class Hub extends EventEmitter {
       savedTo: offer.savedDir || offer.savedTo,
       at: offer.finishedAt || Date.now(),
     });
-    this.history = this.history.slice(0, 60);
+    this.history = this.history.slice(0, HISTORY_KEEP);
   }
 
   // ------------------------------------------------------------ 设置与生命周期
@@ -956,6 +1093,12 @@ class Hub extends EventEmitter {
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
     this.stopRoom();
+    if (this.panel) {
+      try {
+        this.panel.server.close();
+      } catch {}
+      this.panel = null;
+    }
   }
 }
 

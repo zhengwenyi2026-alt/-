@@ -15,6 +15,10 @@ const HEADER_SIZE = 12;
 const MAX_FILES_PER_OFFER = 5000;
 const MAX_PATH_DEPTH = 16;
 
+// 单条文本消息的 UTF-8 字节上限。控制帧走 JSON，最坏转义后每字节膨胀 6 倍，
+// 32KB 落在 ws maxPayload（CHUNK_SIZE + 4096 ≈ 260KB）之内，不会触发 1009 断连
+const MAX_TEXT_BYTES = 32 * 1024;
+
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
 function encodeChunk(fileId, offset, data) {
@@ -86,6 +90,7 @@ module.exports = {
   CHUNK_SIZE,
   HEADER_SIZE,
   MAX_FILES_PER_OFFER,
+  MAX_TEXT_BYTES,
   encodeChunk,
   decodeChunk,
   sanitizeName,

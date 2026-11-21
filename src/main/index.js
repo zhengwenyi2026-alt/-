@@ -9,6 +9,7 @@ const path = require('path');
 const { Hub, formatBytes } = require('./engine/hub');
 const { generateRoomCode } = require('./engine/roomCode');
 const { probeRelay } = require('./engine/relay');
+const { MAX_TEXT_BYTES } = require('./engine/protocol');
 const { Store } = require('./store');
 const I18N = require('../common/i18n');
 
@@ -91,9 +92,12 @@ function initHub() {
     relayEnabled: Boolean(store.get('relayEnabled', false)),
     relayProvider: store.get('relayProvider', 'cloudflare'),
     relayUrl: store.get('relayUrl', ''),
+    appVersion: app.getVersion(),
   });
   hub.on('event', push);
   fsp.mkdir(hub.saveDir, { recursive: true }).catch(() => {});
+  // 本机传输面板常驻，房间没开的时候也能看历史与设置；只绑 127.0.0.1
+  hub.startPanel().catch(() => {});
   return hub;
 }
 
@@ -178,6 +182,18 @@ function registerIpc() {
       return hub.send({ peerIds: ids, paths });
     })
   );
+
+  ipcMain.handle(
+    'skydrop:send-text',
+    ok(({ peerIds, text, asFile }) => {
+      if (typeof text !== 'string') throw new Error('文本内容为空');
+      if (text.length > MAX_TEXT_BYTES) throw new Error('文本过长（超过 32 KB 上限）');
+      const ids = isStringArray(peerIds) ? peerIds : [];
+      return hub.sendText({ peerIds: ids, text, asFile: Boolean(asFile) });
+    })
+  );
+
+  ipcMain.handle('skydrop:clear-texts', ok(() => hub.clearTexts()));
 
   ipcMain.handle(
     'skydrop:preview',
@@ -269,9 +285,17 @@ function registerIpc() {
     return hub.saveDir;
   });
 
-  // Electron 的 file:// 页面里 navigator.clipboard 并不可靠，统一走主进程
+  ipcMain.handle('skydrop:open-panel', async () => {
+    const url = hub.panel && hub.panel.url;
+    if (!url || !/^http:\/\/(localhost|127\.0\.0\.1):\d+\//.test(url)) throw new Error('面板未就绪');
+    await shell.openExternal(url);
+    return url;
+  });
+
+  // Electron 的 file:// 页面里 navigator.clipboard 并不可靠，统一走主进程。
+  // 上限与文本传送一致，收到的长文本也要能复制。
   ipcMain.on('skydrop:copy', (_e, text) => {
-    if (typeof text === 'string' && text.length <= 200) clipboard.writeText(text);
+    if (typeof text === 'string' && text.length <= MAX_TEXT_BYTES) clipboard.writeText(text);
   });
 }
 

@@ -11,6 +11,7 @@ const { once } = require('events');
 const WebSocket = require('ws');
 
 const { Hub } = require('../src/main/engine/hub');
+const { lanInterfaces, unicastProbeTargets } = require('../src/main/engine/net');
 const { PROTO_VERSION, CHUNK_SIZE, encodeChunk, decodeChunk, sanitizeName, sanitizeRel } = require('../src/main/engine/protocol');
 const { generateRoomCode, normalizeRoomCode, formatRoomCode, sanitizeRoomInput } = require('../src/main/engine/roomCode');
 
@@ -214,6 +215,127 @@ test('端到端：建房 → 房间码自动发现 → 双向传文件（含目�
   guest.respondOffer(ev3.offer.id, true);
   await nextEvent(guest, 'offer-done', (e) => e.ok);
   assert.ok(fs.existsSync(path.join(guest.saveDir, '回传 (1).dat')), '重名文件未生成副本');
+});
+
+test('单播探测：广播被拦时逐地址扫所在 /24，有界且跳过虚拟网卡', () => {
+  const real = os.networkInterfaces;
+  os.networkInterfaces = () => ({
+    en0: [{ family: 'IPv4', internal: false, address: '192.168.1.23', netmask: '255.255.255.0' }],
+    utun3: [{ family: 'IPv4', internal: false, address: '10.8.0.2', netmask: '255.255.255.255' }],
+    lo0: [{ family: 'IPv4', internal: true, address: '127.0.0.1', netmask: '255.0.0.0' }],
+  });
+  try {
+    const list = unicastProbeTargets();
+    assert.ok(list.includes('192.168.1.1') && list.includes('192.168.1.254'), '应覆盖所在 /24 的全部主机位');
+    assert.ok(!list.includes('192.168.1.0') && !list.includes('192.168.1.255'), '网络号与广播地址不参与');
+    assert.equal(list.length, 254); // utun 与回环不参与
+    assert.ok(!list.includes('10.8.0.2'), 'VPN 虚拟网卡不扫描');
+  } finally {
+    os.networkInterfaces = real;
+  }
+});
+
+test('发现兜底：广播目标不可达时单播仍能找到房间', async (t) => {
+  // 用独立 UDP 端口：这台机器上真实运行的隔空传实例也绑 47812，
+  // macOS 同端口多 socket 时单播只投给其中一个，测试会被真实实例抢走
+  const host = new Hub({ deviceName: '主机房', saveDir: tmpDir('host-uni'), autoApprove: true, udpPort: 47815 });
+  const guest = new Hub({ deviceName: '访客机', saveDir: tmpDir('guest-uni'), udpPort: 47815 });
+  t.after(() => {
+    host.dispose();
+    guest.dispose();
+  });
+  const room = await host.startRoom();
+  // 坏广播地址（TEST-NET-3，不会被任何网卡接受）+ 本机真实局域网地址：
+  // 单播路径必须能找到房间，且坏地址触发的异步发送错误不能中断整场发现
+  const lan = lanInterfaces().find((i) => i.metric <= 2);
+  const targets = ['203.0.113.255', lan ? lan.address : '127.0.0.1'];
+  const list = await guest._discover({ room: room.code, timeout: 1500, targets });
+  assert.ok(list.length >= 1, '单播探测没有找到房间');
+  assert.equal(list[0].room, room.code);
+});
+
+test('加入失败：自动重扫并把附近开着的房间报进错误与列表', async (t) => {
+  const host = new Hub({ deviceName: '真房主', saveDir: tmpDir('host-near'), autoApprove: true, udpPort: 47816 });
+  const guest = new Hub({ deviceName: '迷路访客', saveDir: tmpDir('guest-near'), udpPort: 47816 });
+  t.after(() => {
+    host.dispose();
+    guest.dispose();
+  });
+  const room = await host.startRoom();
+  const errEvent = nextEvent(guest, 'join-error', null, 15_000);
+  await assert.rejects(() => guest.joinRoom('ZZZZZZ'), /没有找到房间/);
+  const ev = await errEvent;
+  assert.match(ev.msg, /附近现在开着/, '错误里应列出当前实际开着的房间');
+  assert.ok(ev.params && ev.params.code === formatRoomCode('ZZZZZZ'), '参数带格式化的请求房间码');
+  assert.ok(ev.params.rooms.includes(room.code) && ev.params.rooms.includes('真房主'), '参数里包含房间码与设备名');
+  assert.ok(guest.visible.some((r) => r.room === room.code && r.at), '重扫结果已刷新进附近列表并带时间戳');
+});
+
+test('附近列表：条目 90 秒过期，不再误导「扫描到了就能加入」', async (t) => {
+  const hub = new Hub({ deviceName: '过期机', saveDir: tmpDir('host-exp') });
+  t.after(() => hub.dispose());
+  hub.visible = [
+    { deviceId: 'a', name: '旧房间', room: 'ABC234', ip: '192.0.2.1', port: 47810, at: Date.now() - 120_000 },
+    { deviceId: 'b', name: '新房间', room: 'DEF345', ip: '192.0.2.2', port: 47810, at: Date.now() },
+  ];
+  assert.deepEqual(hub.state().visible.map((r) => r.room), ['DEF345']);
+});
+
+test('传送文本：即时文本、生成 TXT、越界拒绝', async (t) => {
+  const { host, guest } = makePair();
+  t.after(() => {
+    host.dispose();
+    guest.dispose();
+  });
+  const room = await host.startRoom();
+  await guest.joinDirect(`127.0.0.1:${room.port}`, room.code);
+
+  // 仅文本：无需对方确认，直接出现在对方的文本栏
+  const textIn = nextEvent(host, 'text-in');
+  const sent = await guest.sendText({ text: '你好，隔空传' });
+  assert.equal(sent.count, 1);
+  assert.equal(sent.size, Buffer.byteLength('你好，隔空传'));
+  const ev = await textIn;
+  assert.equal(ev.text.text, '你好，隔空传');
+  assert.equal(host.texts[0].dir, 'in');
+  assert.equal(host.texts[0].peerName, '访客机');
+  assert.equal(guest.texts[0].dir, 'out');
+  assert.ok(host.state().texts.length >= 1);
+
+  // 反向：主机 → 访客
+  const textIn2 = nextEvent(guest, 'text-in');
+  await host.sendText({ text: '第二行文本' });
+  assert.equal((await textIn2).text.text, '第二行文本');
+
+  // 空白与超长：既不发送也不写记录
+  await assert.rejects(() => guest.sendText({ text: '   ' }), /文本内容为空/);
+  await assert.rejects(() => guest.sendText({ text: 'a'.repeat(32 * 1024 + 1) }), /文本过长/);
+  assert.equal(guest.texts.length, 2);
+  assert.equal(host.texts.length, 2);
+
+  // 生成 TXT：走普通文件管线，接收端像收文件一样确认、落盘
+  const offerIn = nextEvent(host, 'offer-in');
+  const txtResult = await guest.sendText({ text: '落盘的文本内容\n第二行', asFile: true });
+  assert.equal(txtResult.count, 1);
+  const ev2 = await offerIn;
+  assert.equal(ev2.offer.files.length, 1);
+  assert.match(ev2.offer.files[0].name, /^文本 \d{4}-\d{2}-\d{2} /);
+  assert.match(ev2.offer.files[0].name, /\.txt$/);
+  host.respondOffer(ev2.offer.id, true);
+  await nextEvent(host, 'offer-done', (e) => e.ok);
+  const savedName = ev2.offer.files[0].name;
+  assert.equal(await fsp.readFile(path.join(host.saveDir, savedName), 'utf8'), '落盘的文本内容\n第二行');
+
+  // 发送端的临时 .txt 要在任务收尾后删掉
+  await new Promise((r) => setTimeout(r, 150));
+  const tmpTextDir = path.join(os.tmpdir(), 'skydrop-text');
+  const leftovers = (await fsp.readdir(tmpTextDir).catch(() => [])).filter((n) => n === savedName);
+  assert.deepEqual(leftovers, [], '临时 txt 文件没有清理');
+
+  // 记录上限：塞满后最早的要被挤出去
+  for (let i = 0; i < 65; i += 1) host._pushText({ dir: 'out', peerName: '访客机', text: `第 ${i} 条`, size: 5 });
+  assert.equal(host.texts.length, 60);
+  assert.equal(host.texts[0].text, '第 64 条');
 });
 
 test('房间权限：错误房间码被拒绝，手动批准流程可用', async (t) => {

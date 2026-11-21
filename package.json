@@ -1,6 +1,6 @@
 {
   "name": "skydrop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "隔空传 SkyDrop —— 免服务器、拖拽即传文件的跨平台应用，支持局域网直传与自建中继跨网段传输",
   "main": "src/main/index.js",
   "author": "xiaopacaisky",
@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/engine.test.js",
+    "test": "node --test test/engine.test.js test/dashboard.test.js",
     "speed": "node test/throughput.js",
     "e2e": "node test/e2e-two-instances.js",
     "dist": "electron-builder --mac --win",
@@ -16,7 +16,9 @@
     "dist:win": "electron-builder --win",
     "clean": "node scripts/clean.js",
     "release": "node scripts/release.js",
-    "verify:packaged": "node test/verify-packaged-transfer.js"
+    "verify:packaged": "node test/verify-packaged-transfer.js",
+    "verify:panel": "node test/panel-live.js",
+    "verify:text": "node test/text-live.js"
   },
   "dependencies": {
     "ws": "^8.23.0"

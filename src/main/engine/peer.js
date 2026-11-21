@@ -8,6 +8,7 @@ const {
   PROTO_VERSION,
   CHUNK_SIZE,
   MAX_FILES_PER_OFFER,
+  MAX_TEXT_BYTES,
   encodeChunk,
   decodeChunk,
   sanitizeName,
@@ -205,10 +206,26 @@ class Peer extends EventEmitter {
     this._sendCtl({ type: 'file-done', transferId: out.transferId, id: file.id, sha256: hash.digest('hex'), size: offset });
   }
 
+  /**
+   * 推送一段纯文本：控制帧即时送达，无需对方确认，收到即出现在对方的文本栏。
+   * 与文件共用「approved 之后才能发」的门槛；大小校验在 hub 与这里各做一次，
+   * 这里是协议层兜底（防止绕过 IPC 的调用方）。
+   */
+  sendText(text) {
+    if (!this.approved) throw new Error('尚未与对方设备建立连接');
+    const body = String(text ?? '');
+    if (!body.trim()) throw new Error('文本内容为空');
+    const size = Buffer.byteLength(body, 'utf8');
+    if (size > MAX_TEXT_BYTES) throw new Error('文本过长（超过 32 KB 上限）');
+    const textId = `x${Date.now().toString(36)}-${++this._transferSeq}`;
+    this._sendCtl({ type: 'text', textId, text: body, size });
+    this.emit('text-out', { textId, text: body, size });
+    return { textId, size };
+  }
+
   // ---------------------------------------------------------------- 接收
 
-  acceptIncoming(transferId, saveDir) {
-    const rec = this._offersIn.get(transferId);
+  acceptIncoming(transferId, saveDir) {    const rec = this._offersIn.get(transferId);
     if (!rec || rec.state !== 'pending') return false;
     rec.state = 'accepted';
     if (saveDir) rec.saveDir = saveDir;
@@ -436,6 +453,10 @@ class Peer extends EventEmitter {
           path: String(msg.path || ''),
         });
         break;
+      case 'text':
+        this._assertReady();
+        this._onTextMsg(msg);
+        break;
       case 'ping':
         this._sendCtl({ type: 'pong' });
         break;
@@ -449,6 +470,17 @@ class Peer extends EventEmitter {
 
   _assertReady() {
     if (!this.approved) throw new Error('收到未经批准设备的数据');
+  }
+
+  _onTextMsg(msg) {
+    if (typeof msg.text !== 'string') throw new Error('文本消息格式不正确');
+    if (Buffer.byteLength(msg.text, 'utf8') > MAX_TEXT_BYTES) throw new Error('文本消息超出长度限制');
+    if (!msg.text.trim()) return; // 空白文本不展示也不报错，等价于对方什么都没发
+    this.emit('text-in', {
+      textId: String(msg.textId || `x${Date.now().toString(36)}`),
+      text: msg.text,
+      size: Buffer.byteLength(msg.text, 'utf8'),
+    });
   }
 
   _fatal(message) {
@@ -539,4 +571,4 @@ class Peer extends EventEmitter {
   }
 }
 
-module.exports = { Peer, CHUNK_SIZE, PROGRESS_INTERVAL };
+module.exports = { Peer, CHUNK_SIZE, PROGRESS_INTERVAL, SEND_PIPELINE, MAX_TEXT_BYTES };

@@ -63,9 +63,26 @@ function broadcastTargets() {
   return [...targets];
 }
 
+/**
+ * 广播被路由器/AP 隔离拦掉时的兜底：把每块真实网卡所在 /24 网段逐个地址单播一遍。
+ * 单播通常不受组播/广播过滤影响，每块网卡最多 254 个目标；VPN 与虚拟网卡不参与。
+ */
+function unicastProbeTargets() {
+  const targets = new Set();
+  for (const iface of lanInterfaces()) {
+    if (iface.metric >= 3) continue;
+    const ipLong = ipToLong(iface.address);
+    if (ipLong === null) continue;
+    const base = ipLong & 0xffffff00; // 收敛到所在 /24，网段再大也只扫这一段
+    for (let n = 1; n <= 254; n += 1) targets.add(longToIp(base + n));
+  }
+  targets.delete('127.0.0.1');
+  return [...targets];
+}
+
 /** 给界面展示的本机地址列表 */
 function localAddresses() {
   return lanInterfaces().map((i) => ({ name: i.name, address: i.address }));
 }
 
-module.exports = { lanInterfaces, broadcastTargets, isPrivateAddress, localAddresses, ipToLong, longToIp };
+module.exports = { lanInterfaces, broadcastTargets, unicastProbeTargets, isPrivateAddress, localAddresses, ipToLong, longToIp };

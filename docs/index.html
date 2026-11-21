@@ -325,11 +325,29 @@
     btn.className = 'copy';
     btn.type = 'button';
     btn.textContent = '复制';
+    var flash = function (label) {
+      btn.textContent = label;
+      setTimeout(function () { btn.textContent = '复制'; }, 1600);
+    };
+    var legacy = function (text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      return ok;
+    };
     btn.addEventListener('click', function () {
       var text = f.sum + '  ' + f.name + '\n';
-      var done = function () { btn.textContent = '已复制'; setTimeout(function () { btn.textContent = '复制'; }, 1600); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
-      else done();
+      if (navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(text).then(function () { flash('已复制'); },
+          function () { flash(legacy(text) ? '已复制' : '请手动复制'); });
+      else flash(legacy(text) ? '已复制' : '请手动复制');
     });
     line.appendChild(code); line.appendChild(btn);
     sums.appendChild(line);

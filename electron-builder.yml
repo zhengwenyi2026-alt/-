@@ -1,0 +1,66 @@
+appId: com.xiaopacaisky.skydrop
+productName: 隔空传
+copyright: Copyright © 2026 xiaopacaisky
+artifactName: ${productName}-${version}-${arch}.${ext}
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - src/**/*
+  - package.json
+  - "!**/*.map"
+
+asar: true
+compression: maximum
+
+# 只有 ws 是运行时依赖，随 asar 一起打包
+npmRebuild: false
+
+mac:
+  category: public.app-category.utilities
+  icon: build/icon.png
+  identity: null          # 未做开发者签名，本地使用需右键「打开」
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+
+dmg:
+  title: 隔空传 ${version}
+  contents:
+    - x: 132
+      y: 180
+    - x: 412
+      y: 180
+      type: link
+      path: /Applications
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 隔空传
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: ${productName}-便携版-${version}.${ext}

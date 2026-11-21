@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/room/:code",
+      "destination": "/api/room"
+    }
+  ],
+  "functions": {
+    "api/room.js": {
+      "maxDuration": 300
+    }
+  }
+}

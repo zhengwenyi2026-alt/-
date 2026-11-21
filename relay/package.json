@@ -1,0 +1,18 @@
+{
+  "type": "module",
+  "private": true,
+  "name": "skydrop-relay",
+  "version": "1.0.0",
+  "description": "隔空传跨网传输中继（Cloudflare Worker / Vercel / 自建 Node 共用一套配对逻辑）",
+  "scripts": {
+    "start": "node node-server.js --host 0.0.0.0 --port 8790",
+    "deploy:cloudflare": "npx --yes wrangler@latest deploy",
+    "dev:cloudflare": "npx --yes wrangler@latest dev"
+  },
+  "dependencies": {
+    "ws": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

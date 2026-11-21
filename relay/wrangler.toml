@@ -1,0 +1,16 @@
+# Cloudflare Worker 版中继配置（放在 relay/ 根目录，这样 cloudflare/worker.js
+# 里的 import '../pairing.js' 才在打包根目录内）。
+#
+# 部署（在 relay/ 目录执行）：npx wrangler deploy
+name = "skydrop-relay"
+main = "cloudflare/worker.js"
+compatibility_date = "2026-06-01"
+
+# 每个房间码一个实例，配对状态只存在这个实例里
+[[durable_objects.bindings]]
+name = "SKYDROP_ROOM"
+class_name = "SkyDropRelayRoom"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["SkyDropRelayRoom"]

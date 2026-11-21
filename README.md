@@ -1,6 +1,8 @@
 # 隔空传 SkyDrop
 
-局域网内**免服务器、拖拽即传**文件的跨平台桌面应用。一台设备点「创建房间」拿到 6 位房间码，另一台设备输入房间码加入，然后把文件拖进窗口、按「开始传送」，文件就出现在对方电脑的下载目录里——体验对齐苹果「隔空投送」，但**Windows ↔ Mac ↔ Linux 之间都能互传**。不在同一个网络时，还能挂一个自己的中继（Cloudflare / Vercel / 自建 Node）跨网段传输。
+局域网内**免服务器、拖拽即传**文件的跨平台桌面应用。一台设备点「创建房间」拿到 6 位房间码，另一台设备输入房间码加入，然后把文件拖进窗口、按「开始传送」，文件就出现在对方电脑的下载目录里——体验对齐苹果「隔空投送」，但**Windows 与 Mac 之间都能互传**。不在同一个网络时，还能挂一个自己的中继（Cloudflare / Vercel / 自建 Node）跨网段传输。
+
+**下载站**：<https://zhengwenyi2026-alt.github.io/-/> ｜ **Release 与安装包**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.0>
 
 > 命名说明：「隔空投送 / AirDrop」是 Apple Inc. 的注册商标，本项目与之**没有任何关系**，不使用、也不逆向任何 Apple 私有协议。隔空传 / SkyDrop 是一个独立的原创名称与实现。
 
@@ -50,15 +52,28 @@
 
 ## 下载安装
 
-发布产物在 `dist/`（构建中间目录）与 `可执行文件/`（最终安装包）：
+**下载站**：<https://zhengwenyi2026-alt.github.io/-/>（按打开页面的系统自动推荐安装包，附 sha256）
+**Release**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.0>
 
-| 平台 | 文件 | 体积 | 安装方式 |
+| 平台 | 下载文件 | 体积 | 安装方式 |
 | --- | --- | --- | --- |
-| Apple Silicon Mac | `隔空传-1.0.0-arm64.dmg` | 108.5 MB | 打开 dmg → 把图标拖进 `Applications` |
-| Intel Mac | `隔空传-1.0.0-x64.dmg` | 111.1 MB | 同上 |
-| macOS 免挂载 | `隔空传-1.0.0-arm64.zip` | 112.8 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
-| Windows 10/11 | `隔空传-1.0.0-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式 |
-| Windows 免安装 | `隔空传-便携版-1.0.0.exe` | 105.5 MB | 单文件双击直接运行 |
+| Apple Silicon Mac | `SkyDrop-1.0.0-arm64.dmg` | 108.5 MB | 打开 dmg → 把图标拖进 `Applications` |
+| Intel Mac | `SkyDrop-1.0.0-x64.dmg` | 111.1 MB | 同上 |
+| macOS 免挂载 | `SkyDrop-1.0.0-arm64.zip` | 112.8 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
+| Windows 10/11 | `SkyDrop-Setup-1.0.0-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式 |
+| Windows 免安装 | `SkyDrop-Portable-1.0.0.exe` | 105.5 MB | 单文件双击直接运行 |
+
+Release 资产用英文名 `SkyDrop-` 开头（非 ASCII 文件名在部分下载工具里会被转义），安装后的应用名仍然是**「隔空传」**。本机 `npm run release` 出来的文件在 `可执行文件/` 下，名字是中文的 `隔空传-…`，内容与 Release 资产逐字节相同（`dist/` 是构建中间目录）。
+
+sha256：
+
+```
+db68ea76a85981e2603ddcb07157bd58ee28e49af3849caa097255ec8f0cf807  SkyDrop-1.0.0-arm64.dmg
+278ab994878511ec2d477a4229206a49b8400857cd87817802391a3a74c15853  SkyDrop-1.0.0-arm64.zip
+f2b8776bbf07dba38a7b29f7eb45323e246cc9f3b975aa834594a90826c74400  SkyDrop-1.0.0-x64.dmg
+b061f00616aab1534ec4c255d9e98dbe6e83e16b6559f1a87dae9a1f555e9b77  SkyDrop-Setup-1.0.0-x64.exe
+c1ed3ddd24f9feb8a570797e0f7248d0656e1e71c90e01aac57efa26ee12f8d1  SkyDrop-Portable-1.0.0.exe
+```
 
 ### macOS 首次打开
 
@@ -319,8 +334,9 @@ airdeop/
 ├── scripts/
 │   ├── clean.js                 # 清理 dist/out 与临时文件，回报释放空间
 │   └── release.js               # 一次出 mac + win，并把安装包收进 可执行文件/
-├── dist/                        # 打包中间产物（含未压缩的 .app / win-unpacked）
-└── 可执行文件/                   # 最终交付：2 个 dmg、1 个 zip、2 个 exe
+├── docs/index.html              # 静态下载站（GitHub Pages 直接发布，按访问者系统推荐安装包）
+├── dist/                        # 打包中间产物（含未压缩的 .app / win-unpacked，不进仓库）
+└── 可执行文件/                   # 最终交付：2 个 dmg、1 个 zip、2 个 exe（体积超 GitHub 限制，走 Release 资产）
 ```
 
 ---

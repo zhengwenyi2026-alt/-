@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="隔空传 SkyDrop：把文件拖进窗口就能传到另一台电脑的免费开源应用。局域网直连不经过任何服务器，不在同一网络时可以自己挂中继跨网段传输。提供 macOS 与 Windows 安装包。" />
+<title>隔空传 SkyDrop · 下载</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --card: rgba(28, 32, 42, 0.72);
+    --card-line: rgba(255, 255, 255, 0.08);
+    --text: #eef1f7;
+    --muted: #9aa3b5;
+    --accent: #2f7dff;
+    --accent-2: #61d0ff;
+    --ok: #35c86f;
+    --warn: #ffb648;
+    --danger: #ff6b6b;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 640px at 8% -10%, rgba(47, 125, 255, 0.28), transparent 60%),
+      radial-gradient(900px 520px at 100% 0%, rgba(97, 208, 255, 0.18), transparent 62%),
+      radial-gradient(800px 700px at 60% 110%, rgba(120, 87, 255, 0.16), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+    font-size: 15px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 40px 20px 64px; }
+
+  header.hero { display: flex; gap: 18px; align-items: center; margin-bottom: 8px; }
+  .mark {
+    width: 56px; height: 56px; flex: none; border-radius: 14px;
+    background: linear-gradient(140deg, var(--accent), #7857ff);
+    display: grid; place-items: center;
+    box-shadow: 0 10px 30px rgba(47, 125, 255, 0.35);
+  }
+  .mark svg { width: 30px; height: 30px; }
+  h1 { font-size: 30px; margin: 0; letter-spacing: 0.5px; }
+  .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .pitch { color: var(--muted); max-width: 62ch; margin: 14px 0 26px; }
+  .pitch b { color: var(--text); font-weight: 600; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--card-line);
+    border-radius: var(--radius); padding: 20px 22px; margin: 18px 0;
+    backdrop-filter: blur(8px);
+  }
+  .card > h2 { margin: 0 0 10px; font-size: 17px; }
+  .hint { color: var(--muted); font-size: 13px; }
+
+  .pick { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 20px; border-radius: 12px; text-decoration: none;
+    font-weight: 600; font-size: 15px; border: 1px solid transparent;
+    transition: transform 0.08s ease, box-shadow 0.2s ease;
+  }
+  .btn.primary { background: linear-gradient(120deg, var(--accent), #4a8dff); color: #fff; box-shadow: 0 8px 22px rgba(47, 125, 255, 0.35); }
+  .btn.ghost { background: rgba(255, 255, 255, 0.06); color: var(--text); border-color: var(--card-line); }
+  .btn:hover { transform: translateY(-1px); }
+  .btn small { font-weight: 500; opacity: 0.8; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  th, td { text-align: left; padding: 11px 10px; border-bottom: 1px solid var(--card-line); vertical-align: top; font-size: 14px; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  tr.rec td { background: rgba(47, 125, 255, 0.10); }
+  td a { color: var(--accent-2); text-decoration: none; word-break: break-all; }
+  td a:hover { text-decoration: underline; }
+  .size { color: var(--muted); white-space: nowrap; }
+  .tag {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(53, 200, 111, 0.16); color: var(--ok); border: 1px solid rgba(53, 200, 111, 0.3);
+    margin-left: 6px; white-space: nowrap;
+  }
+
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+  .sum { display: flex; gap: 8px; align-items: center; }
+  .sum code { color: var(--muted); word-break: break-all; }
+  .copy {
+    flex: none; background: rgba(255, 255, 255, 0.07); color: var(--text);
+    border: 1px solid var(--card-line); border-radius: 8px; padding: 2px 8px; font-size: 12px; cursor: pointer;
+  }
+  .copy:hover { background: rgba(255, 255, 255, 0.13); }
+
+  ul.steps { margin: 6px 0 0; padding-left: 20px; }
+  ul.steps li { margin: 6px 0; }
+  ul.feats { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  ul.feats li { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--card-line); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+  ul.feats b { display: block; margin-bottom: 2px; }
+
+  .note { border-left: 3px solid var(--warn); background: rgba(255, 182, 72, 0.08); padding: 12px 16px; border-radius: 0 12px 12px 0; }
+  .note.blue { border-left-color: var(--accent); background: rgba(47, 125, 255, 0.10); }
+  .note.danger { border-left-color: var(--danger); background: rgba(255, 107, 107, 0.08); }
+  .note p { margin: 6px 0; }
+
+  a.plain { color: var(--accent-2); }
+  footer { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--card-line); color: var(--muted); font-size: 13px; }
+  footer a { color: var(--muted); }
+  @media (max-width: 560px) {
+    h1 { font-size: 24px; }
+    th, td { padding: 9px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v11" /><path d="M8 10.5 12 14.5 16 10.5" /><path d="M4 17.5v2h16v-2" />
+      </svg>
+    </div>
+    <div>
+      <h1>隔空传 SkyDrop</h1>
+      <div class="sub">免费 · 开源 · 免注册 · macOS 与 Windows 互传</div>
+    </div>
+  </header>
+
+  <p class="pitch">
+    把文件拖进窗口，按<b>「开始传送」</b>，文件就出现在对方电脑的下载目录里——体验对齐苹果「隔空投送」，但 <b>Mac 和 Windows 之间也能互传</b>。
+    一台设备点「创建房间」拿到 6 位房间码，另一台输入房间码即可连接。<b>局域网内不经过任何服务器，文件不出你的路由器</b>；
+    两台设备不在同一个网络时，还能挂一个自己的中继跨网段传输。
+  </p>
+
+  <section class="card" id="download">
+    <h2>下载</h2>
+    <div class="pick">
+      <a class="btn primary" id="mainBtn" href="#">下载 <span id="mainName">安装包</span> <small id="mainSize"></small></a>
+      <a class="btn ghost" href="https://github.com/zhengwenyi2026-alt/-">源码仓库</a>
+      <a class="btn ghost" href="https://github.com/zhengwenyi2026-alt/-/releases">全部版本</a>
+    </div>
+    <p class="hint" id="detectNote" style="margin-top:12px"></p>
+
+    <table>
+      <thead>
+        <tr><th>适用设备</th><th>文件</th><th>体积</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="hint" style="margin-top:12px">
+      不确定选哪个？Mac 按「关于本机 → 芯片」判断：Apple M 系列选 <span class="mono">arm64</span>，Intel 选 <span class="mono">x64</span>；
+      Windows 一律用 <span class="mono">Setup-…x64.exe</span>（想要免安装就选 <span class="mono">Portable</span>）。
+      下载文件名用的是应用的英文名 SkyDrop，安装完成后开始菜单与「应用程序」里的名字是<b>「隔空传」</b>，是同一个应用。
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>首次打开</h2>
+    <div class="note">
+      <p><b>macOS</b>：安装包未做开发者证书签名与公证，Gatekeeper 会拦一次。任选一种放行：访达里<b>右键（按住 Control 点击）→ 打开 → 打开</b>；或「系统设置 → 隐私与安全性」底部点「仍要打开」；或终端执行</p>
+      <p class="mono">xattr -dr com.apple.quarantine "/Applications/隔空传.app"</p>
+      <p><b>Windows</b>：SmartScreen 提示「Windows 已保护你的电脑」→ 点<b>更多信息 → 仍要运行</b>。</p>
+      <p><b>防火墙</b>：第一次传输时 macOS 会问「是否允许接收传入网络连接」→ 点<b>允许</b>；Windows 弹窗勾选<b>专用网络</b>即可，不需要放开公用网络。</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>怎么用（三步）</h2>
+    <ul class="steps">
+      <li>两台电脑连同一个 Wi-Fi / 同一路由器。接收方点<b>「创建房间」</b>，界面出现 6 位房间码（例如 <span class="mono">K7M-3XQ</span>）。</li>
+      <li>发送方<b>输入房间码加入</b>，也可以点「扫描附近房间」直接选，或在「高级」里手填 <span class="mono">IP:端口</span>。</li>
+      <li>主机点<b>「允许」</b>，发送方把文件或文件夹拖进窗口、点<b>「开始传送」</b>，接收方点<b>「接收」</b>，文件落到 <span class="mono">~/Downloads/隔空传</span>（Windows 为 <span class="mono">%USERPROFILE%\Downloads\隔空传</span>）。</li>
+    </ul>
+    <p class="hint">房间是双向通道，连上之后任何一方都能发；一个房间最多 8 台设备。文件夹会保留目录层级递归传输，同名文件不会覆盖（自动改成 <span class="mono">报告 (1).pdf</span>）。</p>
+  </section>
+
+  <section class="card">
+    <h2>不在同一个网络也能传</h2>
+    <p>设置里的<b>「跨网传输」</b>默认关闭。打开后填一个你自己部署的 WebSocket 中继地址（Cloudflare Workers / Vercel / 任意一台有公网地址的机器），房主把房间挂到中继上，访客在任意网络输入同一个房间码就能加入——之后的接收确认、进度、校验和局域网完全一样。Cloudflare 部署只需两条命令，免费额度对偶尔传文件完全够用。</p>
+    <p class="hint">部署与排错说明：<a class="plain" href="https://github.com/zhengwenyi2026-alt/-/blob/main/relay/README.md">relay/README.md</a>。没有中继时应用没有任何出站连接。</p>
+  </section>
+
+  <section class="card">
+    <h2>它是怎么保证不出问题的</h2>
+    <ul class="feats">
+      <li><b>完整性校验</b>两端各自单遍增量 sha256，落盘后比对，不一致直接判失败并删掉临时文件，不会留下「看起来成功」的坏文件。</li>
+      <li><b>断点安全</b>先写 <span class="mono">*.part</span>，校验通过再原子改名，中断不会污染已有文件。</li>
+      <li><b>双向人工确认</b>加入房间要主机点「允许」，发送文件要对方点「接收」，180 秒无人确认自动超时。</li>
+      <li><b>房间码抗暴力</b>6 位 × 32 字符集约 10 亿种组合，同一来源连续输错 8 次直接拉黑。</li>
+      <li><b>路径穿越防护</b>文件名与相对路径剔除 <span class="mono">..</span>、绝对路径、Windows 保留名与控制字符，落盘前再做 <span class="mono">realpath</span> 校验。</li>
+      <li><b>只接受私网地址</b>局域网模式默认拒绝公网来源直连，「允许公网地址」是另一个需要单独勾选的开关。</li>
+      <li><b>5 种界面语言</b>简体中文 / 繁體中文 / English / 日本語 / 한국어，跟随系统语言，界面里即时切换、无需重启。</li>
+      <li><b>零依赖</b>打包成自包含的 <span class="mono">.dmg</span> / <span class="mono">.exe</span>，双击即用，不需要装 Node 或 Python。</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>请知情的几点</h2>
+    <div class="note danger">
+      <p><b>传输内容未加密。</b>局域网直连时链路在你自己的路由器内；<b>走中继时</b>中继做的是字节透传，因此中继的运营方（Cloudflare、Vercel 或那台机器的管理员）理论上能看到文件名与文件内容。中继代码本身不写盘、不记日志、配对关系只存内存且断开即清，但这不等于加密。传敏感文件请优先用自建中继，端到端加密是后续项、当前版本尚未实现。</p>
+      <p><b>没有断点续传</b>：中断后需重传整个文件。<b>单次任务上限 5000 个文件</b>，目录递归最深 16 层。</p>
+      <p><b>公共 Wi-Fi 注意</b>：开了「AP 隔离 / 客户端隔离」的网络会屏蔽设备互访，任何局域网工具都传不了——那正是跨网传输要解决的场景。</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>校验和（sha256）</h2>
+    <p class="hint">下载后可以先比对再安装，例如 <span class="mono">shasum -a 256 SkyDrop-1.0.0-arm64.dmg</span>（Windows：<span class="mono">certutil -hashfile 文件名 SHA256</span>）。</p>
+    <div id="sums" style="display:grid; gap:10px"></div>
+  </section>
+
+  <footer>
+    <p>源码、issue 与打包脚本：<a class="plain" href="https://github.com/zhengwenyi2026-alt/-">github.com/zhengwenyi2026-alt/-</a> ｜ MIT License ｜ 本页只放静态下载链接，不统计访问、不加载任何第三方资源。</p>
+    <p>「隔空投送」与「AirDrop」为 Apple Inc. 的注册商标，仅用于描述用户熟悉的使用场景，本项目与 Apple 无关联、不含其任何代码或协议实现。</p>
+  </footer>
+</div>
+
+<script>
+  var BASE = 'https://github.com/zhengwenyi2026-alt/-/releases/download/v1.0.0/';
+  var FILES = [
+    { name: 'SkyDrop-1.0.0-arm64.dmg', size: '108.5 MB', label: 'Apple Silicon Mac（M1/M2/M3/M4）', os: 'mac', arch: 'arm64', kind: 'dmg',
+      sum: 'db68ea76a85981e2603ddcb07157bd58ee28e49af3849caa097255ec8f0cf807' },
+    { name: 'SkyDrop-1.0.0-x64.dmg', size: '111.1 MB', label: 'Intel Mac', os: 'mac', arch: 'x64', kind: 'dmg',
+      sum: 'f2b8776bbf07dba38a7b29f7eb45323e246cc9f3b975aa834594a90826c74400' },
+    { name: 'SkyDrop-1.0.0-arm64.zip', size: '112.8 MB', label: 'Mac 免挂载（解压即得 .app）', os: 'mac', arch: 'arm64', kind: 'zip',
+      sum: '278ab994878511ec2d477a4229206a49b8400857cd87817802391a3a74c15853' },
+    { name: 'SkyDrop-Setup-1.0.0-x64.exe', size: '116.1 MB', label: 'Windows 10/11 安装版', os: 'win', arch: 'x64', kind: 'exe',
+      sum: 'b061f00616aab1534ec4c255d9e98dbe6e83e16b6559f1a87dae9a1f555e9b77' },
+    { name: 'SkyDrop-Portable-1.0.0.exe', size: '105.5 MB', label: 'Windows 免安装单文件', os: 'win', arch: 'x64', kind: 'portable',
+      sum: 'c1ed3ddd24f9feb8a570797e0f7248d0656e1e71c90e01aac57efa26ee12f8d1' }
+  ];
+
+  function url(name) { return BASE + encodeURIComponent(name); }
+
+  function basicOs() {
+    var ua = navigator.userAgent || '';
+    var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    if (/Win/i.test(p) || /Windows/i.test(ua)) return 'win';
+    if (/Mac|iPhone|iPad/i.test(p) || /Mac OS X/i.test(ua)) return /iPhone|iPad/i.test(ua) ? '' : 'mac';
+    if (/Linux/i.test(p) || /Linux/i.test(ua)) return 'linux';
+    return '';
+  }
+
+  function pick(d) {
+    if (d.os === 'win') return byKind('exe');
+    if (d.os === 'mac') return byKind('dmg', d.arch || 'arm64') || byKind('dmg', 'arm64');
+    return null;
+  }
+  function byKind(kind, arch) {
+    for (var i = 0; i < FILES.length; i++) {
+      var f = FILES[i];
+      if (f.kind !== kind) continue;
+      if (arch && f.arch !== arch) continue;
+      return f;
+    }
+    return null;
+  }
+
+  var guess = { os: basicOs(), arch: '' };
+
+  function render(d) {
+    var rec = pick(d);
+    var rows = document.getElementById('rows');
+    rows.textContent = '';
+    FILES.forEach(function (f) {
+      var tr = document.createElement('tr');
+      if (rec && f.name === rec.name) tr.className = 'rec';
+      var td1 = document.createElement('td');
+      td1.textContent = f.label;
+      if (rec && f.name === rec.name) {
+        var b = document.createElement('span');
+        b.className = 'tag';
+        b.textContent = '为你的设备推荐';
+        td1.appendChild(b);
+      }
+      var td2 = document.createElement('td');
+      var a = document.createElement('a');
+      a.href = url(f.name);
+      a.textContent = f.name;
+      td2.appendChild(a);
+      var td3 = document.createElement('td');
+      td3.className = 'size';
+      td3.textContent = f.size;
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+      rows.appendChild(tr);
+    });
+
+    var note = document.getElementById('detectNote');
+    var btn = document.getElementById('mainBtn');
+    if (rec) {
+      btn.href = url(rec.name);
+      document.getElementById('mainName').textContent = rec.name;
+      document.getElementById('mainSize').textContent = '· ' + rec.size;
+      note.textContent = d.os === 'win'
+        ? '已根据你的浏览器识别为 Windows，默认推荐安装版；想免安装就换 Portable。'
+        : '已根据你的浏览器识别为 Mac，默认推荐 dmg；不想挂载就下 zip。Intel 芯片请改选 x64。';
+    } else {
+      note.textContent = '当前系统没有对应的桌面安装包：引擎本身平台无关，但本版本只发布 macOS 与 Windows 产物。';
+      btn.href = 'https://github.com/zhengwenyi2026-alt/-/releases';
+      document.getElementById('mainName').textContent = '全部产物';
+      document.getElementById('mainSize').textContent = '';
+    }
+  }
+
+  render(guess);
+
+  // Chromium 系浏览器可以进一步问出真实芯片架构，问到之后重画一次推荐
+  if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+    navigator.userAgentData.getHighEntropyValues(['platform', 'architecture']).then(function (h) {
+      if (!h) return;
+      if (/macOS/i.test(h.platform || '')) guess.arch = /arm/i.test(h.architecture || '') ? 'arm64' : 'x64';
+      else if (/Windows/i.test(h.platform || '')) guess.os = 'win';
+      render(guess);
+    }, function () {});
+  }
+
+  var sums = document.getElementById('sums');
+  FILES.forEach(function (f) {
+    var line = document.createElement('div');
+    line.className = 'sum';
+    var code = document.createElement('code');
+    code.textContent = f.sum + '  ' + f.name;
+    var btn = document.createElement('button');
+    btn.className = 'copy';
+    btn.type = 'button';
+    btn.textContent = '复制';
+    btn.addEventListener('click', function () {
+      var text = f.sum + '  ' + f.name + '\n';
+      var done = function () { btn.textContent = '已复制'; setTimeout(function () { btn.textContent = '复制'; }, 1600); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+      else done();
+    });
+    line.appendChild(code); line.appendChild(btn);
+    sums.appendChild(line);
+  });
+</script>
+</body>
+</html>

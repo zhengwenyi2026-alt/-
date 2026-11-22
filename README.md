@@ -2,7 +2,7 @@
 
 局域网内**免服务器、拖拽即传**文件的跨平台桌面应用。一台设备点「创建房间」拿到 6 位房间码，另一台设备输入房间码加入，然后把文件拖进窗口、按「开始传送」，文件就出现在对方电脑的下载目录里——体验对齐苹果「隔空投送」，但**Windows 与 Mac 之间都能互传**。不在同一个网络时，还能挂一个自己的中继（Cloudflare / Vercel / 自建 Node）跨网段传输。
 
-**下载站**：<https://zhengwenyi2026-alt.github.io/-/> ｜ **Release 与安装包**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.4>
+**下载站**：<https://zhengwenyi2026-alt.github.io/-/> ｜ **Release 与安装包**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.5>
 
 > 命名说明：「隔空投送 / AirDrop」是 Apple Inc. 的注册商标，本项目与之**没有任何关系**，不使用、也不逆向任何 Apple 私有协议。隔空传 / SkyDrop 是一个独立的原创名称与实现。
 
@@ -58,30 +58,30 @@
 ## 下载安装
 
 **下载站**：<https://zhengwenyi2026-alt.github.io/-/>（按打开页面的系统自动推荐安装包，附 sha256）
-**Release**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.4>
+**Release**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.5>
 
 | 平台 | 下载文件 | 体积 | 安装方式 |
 | --- | --- | --- | --- |
-| Apple Silicon Mac | `SkyDrop-1.0.4-arm64.dmg` | 108.3 MB | 打开 dmg → 把图标拖进 `Applications` |
-| Intel Mac | `SkyDrop-1.0.4-x64.dmg` | 111.2 MB | 同上 |
-| macOS 免挂载 | `SkyDrop-1.0.4-arm64.zip` | 112.9 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
-| Windows 10/11（x64） | `SkyDrop-Setup-1.0.4-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式；安装时请求一次 UAC 并自动添加防火墙放行规则 |
-| Windows ARM64 | `SkyDrop-Setup-1.0.4-arm64.exe` | 110.5 MB | 同上（骁龙等 ARM 笔记本） |
-| Windows 免安装（x64） | `SkyDrop-Portable-1.0.4-x64.exe` | 105.6 MB | 单文件双击直接运行 |
-| Windows 免安装（ARM64） | `SkyDrop-Portable-1.0.4-arm64.exe` | 100.6 MB | 单文件双击直接运行 |
+| Apple Silicon Mac | `SkyDrop-1.0.5-arm64.dmg` | 108.3 MB | 打开 dmg → 把图标拖进 `Applications` |
+| Intel Mac | `SkyDrop-1.0.5-x64.dmg` | 111.2 MB | 同上 |
+| macOS 免挂载 | `SkyDrop-1.0.5-arm64.zip` | 112.9 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
+| Windows 10/11（x64） | `SkyDrop-Setup-1.0.5-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式；安装时请求一次 UAC 并自动添加防火墙放行规则 |
+| Windows ARM64 | `SkyDrop-Setup-1.0.5-arm64.exe` | 110.5 MB | 同上（骁龙等 ARM 笔记本） |
+| Windows 免安装（x64） | `SkyDrop-Portable-1.0.5-x64.exe` | 105.6 MB | 单文件双击直接运行 |
+| Windows 免安装（ARM64） | `SkyDrop-Portable-1.0.5-arm64.exe` | 100.6 MB | 单文件双击直接运行 |
 
 Release 资产用英文名 `SkyDrop-` 开头（非 ASCII 文件名在部分下载工具里会被转义），安装后的应用名仍然是**「隔空传」**。本机 `npm run release` 出来的文件在 `可执行文件/` 下，名字是中文的 `隔空传-…`，内容与 Release 资产逐字节相同（`dist/` 是构建中间目录）。
 
 sha256：
 
 ```
-ac973d0b5d0b21e05ba080a3d34e60c297e195c501d25a72d422d813876e5de7  SkyDrop-1.0.4-arm64.dmg
-49214611bca690c67956952d8b7311861dd0d08e67a42c34f67e9d64a3474908  SkyDrop-1.0.4-x64.dmg
-9ec37cd558dea70d0bb2ec98ddf8506be45bc588cdca1619c60969b657badf24  SkyDrop-1.0.4-arm64.zip
-d7ee910d4312cffdef27379a0766f9d9b91324aaea5057d91ead21785ec5413c  SkyDrop-Setup-1.0.4-x64.exe
-07e8ee1462b966f8794c236e837eb758158e6ded9716c7f78c344a8168f7bcfe  SkyDrop-Setup-1.0.4-arm64.exe
-7b8fcc7ea204a606972e9798ecabf907ee15a785e36be501e8060690e687d847  SkyDrop-Portable-1.0.4-x64.exe
-7626718cf3d6cebfc8cd004b59f73119d5cb522a5abba65d4cbfb0263c6dbc8f  SkyDrop-Portable-1.0.4-arm64.exe
+e94ac2b5030100144b1c8952127e036f011a8109dc15d44171d310eb39299fdf  SkyDrop-1.0.5-arm64.dmg
+ccd54d500a5ca23a42d933ed08ae7e6f05d681275257e583e7392f168bdb8559  SkyDrop-1.0.5-x64.dmg
+3345d4c5e99a3058f68a92e25a9e53be07681785ea27865552eebbe5d6892627  SkyDrop-1.0.5-arm64.zip
+f56b55030d7a258a534114a4bb0443e9bbafea9ef6eae1adc45c01c1af549966  SkyDrop-Setup-1.0.5-x64.exe
+864a8760e0f8d0cb9fec6a2f1d2588bdd7c65961fe4a4652b35291a8ee2cc1e2  SkyDrop-Setup-1.0.5-arm64.exe
+d9d61f198a17f0b0d19e24116ebef6a32b9199fed6201f2140550c6cbb7f5510  SkyDrop-Portable-1.0.5-x64.exe
+d4983f6422bd78ed2fb8bec9ba499903b6fe012cc3ca4b74c381895635385a0c  SkyDrop-Portable-1.0.5-arm64.exe
 ```
 
 ### macOS 首次打开
@@ -544,7 +544,7 @@ brew install --cask wine-stable
 | 文本实测 | `npm run verify:text` | 起**真实应用实例** + 一个引擎侧访客（CDP 驱动真实窗口，载荷可调，默认含 2500 字长文本）：输入框打字 → 「仅文本发送」→ 访客立刻收到文本事件；访客反向发文本 → 应用「4 · 传送文本」列表出现「收到」行 → 点「复制」→ 用 `pbpaste` 对拍剪贴板逐字符一致；2500 字长文本折叠成 400 字、点击展开全文；40000 字超限 → 弹「文本过长」且对端收不到；「生成 TXT 发送」→ 访客收到 `文本 YYYY-MM-DD HH-MM-SS-n.txt`、内容逐字节一致、应用历史里是一条完成任务、`os.tmpdir()/skydrop-text` 临时目录自动清空；切到 English 校验文本卡片按钮与列表已翻译；面板快照带 `texts` 与 `textMaxBytes`；窗口控制台零报错。全部通过时打印「结果：全部通过 ✅」，否则非零退出 |
 | UI 端到端 | `npm run e2e` | 用 puppeteer-core 通过 CDP 驱动**两个真实 Electron 窗口**：A 建房间 → B 输码 → A 批准 → B 拖入 zip/txt/文件夹 → A 点接收 → 校验落盘内容逐字节一致、`.DS_Store` 被跳过、反向传输、**切换到英文并校验静态文案/按钮/历史记录/窗口标题都已翻译**、切回中文、离开房间后设备列表清空；随后**起一个本地中继进程跑跨网段阶段**：A 侧填中继 +「测试连接」→ 挂上房间槽位 → B 经中继加入（A 侧设备标记「互联网中继」）→ 双向确认 → 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零；输出 12 张截图到 `out/e2e/` |
 | 隧道实测 | `npm run verify:tunnel` | 起**真实应用实例** + 一个只知道公网地址的引擎侧访客（CDP 驱动真实窗口，需本机装了 ngrok）：应用启动即在状态里报出 `installed=true` 与版本号；把 `tunnel.installed` 改成 false 再走一遍页面里真实的 `renderRelay`，确认 ngrok 选项与隧道块整体消失、服务商退回非 ngrok（**未装即不可见**的门禁）；勾「允许通过互联网连接」→ 选「ngrok · 本机隧道」→ 自动开总开关、中继地址输入框让位给隧道面板；点「启动隧道」先显示「正在启动隧道…」，约 1 秒拿到 `https://xxxx.ngrok-free.app`，面板显示地址与状态、启动/停止按钮互斥；**从公网侧 GET `<地址>/health` 返回 200**（证明流量真的过了 ngrok 边缘节点回到本机内置中继）；房主 3 条槽位就绪；访客只经这条公网隧道加入（`via=relay`，房主侧不带局域网 IP）；访客 → 应用传 3 MB 单文件 + 一个含子目录的目录（字节数一致、层级保留），应用 → 访客反向传内容逐字节一致；点「复制」用 `pbpaste` 对拍剪贴板与隧道地址完全相同；点「停止隧道」后 `relay.url` 不残留、界面地址回占位、那条公网地址改报 `ERR_NGROK_3200`（404），退出后 `pgrep -fl "ngrok http"` 无残留进程；渲染进程控制台零报错；截图与主进程日志存到 `out/tunnel/`。**加 `--packaged` 跑同一遍**（`node test/tunnel-live.js --packaged`，从 `/tmp/skydrop-app/` 拉起安装包里的 `.app`）：证明 asar 里的 `relay/node-server.js` 能被应用内动态 `import()` 起来，隧道在打包版里同样通 |
-| 打包件实测 | `npm run verify:packaged` | 先 `hdiutil attach -nobrowse -readonly dist/隔空传-1.0.4-arm64.dmg -mountpoint /tmp/skydrop-mnt`，把 `隔空传.app` 拷到 `/tmp/skydrop-app/`（脚本从这里启动真实安装包），与源码实例配对后先切到 English 校验按钮文案与窗口标题（证明 5 语言词典确实进了 asar），传 8 MB 二进制 + 文本 + 目录；然后**再挂一个本地中继走跨网段那一遍**：打包版「测试连接」→ 槽位就绪 → 源码版经中继加入（打包版侧出现「互联网中继」标记）→ 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零，确认 asar 里的产物真的能建房、配对、经中继收文件 |
+| 打包件实测 | `npm run verify:packaged` | 先 `hdiutil attach -nobrowse -readonly dist/隔空传-1.0.5-arm64.dmg -mountpoint /tmp/skydrop-mnt`，把 `隔空传.app` 拷到 `/tmp/skydrop-app/`（脚本从这里启动真实安装包），与源码实例配对后先切到 English 校验按钮文案与窗口标题（证明 5 语言词典确实进了 asar），传 8 MB 二进制 + 文本 + 目录；然后**再挂一个本地中继走跨网段那一遍**：打包版「测试连接」→ 槽位就绪 → 源码版经中继加入（打包版侧出现「互联网中继」标记）→ 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零，确认 asar 里的产物真的能建房、配对、经中继收文件 |
 | 中继部署件 | `npx wrangler deploy --dry-run` | 在 `relay/` 下做打包校验：`wrangler 4.166.0` 通过，Total Upload 11.17 KiB（gzip 3.68 KiB），绑定 `env.SKYDROP_ROOM (SkyDropRelayRoom) Durable Object`——不需要真实 Cloudflare 账号即可确认 Worker 与 `wrangler.toml` 可用 |
 
 当前状态：引擎 + 加密 + 中继 + 面板 + ngrok 57/57 通过（`npm test` 跑 `engine.test.js` 51 条与 `dashboard.test.js` 6 条，含 UDP 发现的单播兜底、坏目标不中断、加入失败自动重扫报出可用房间与列表过期，17 条 ngrok 检测/隧道/固定地址/hub 状态与界面门禁用例，以及 5 条端到端加密用例：密钥交换与记录层的性质、双方都支持时中继视角看不到文件名与正文、退回明文的三种情形（本机关 / 对方旧版本 / 握手无响应）且加密会话拒收明文业务帧、设置开关从界面一路贯通到新建连接、未批准的访客发 kx 帧也换不到「已连接」），隧道实测 `npm run verify:tunnel` 「全部通过 ✅」（28 项检查，本机 ngrok 3.37.2：应用内检测到 → 启动隧道 1 秒拿到公网地址 → 从公网侧 `GET /health` 返回 200 → 访客只经这条隧道双向传 3 MB 与含子目录的目录 → 复制进系统剪贴板逐字符一致 → 停止后那条地址改报 `ERR_NGROK_3200`、`pgrep` 无残留 ngrok 进程；固定地址那一段用真实 ngrok 账号跑：填一个不属于本账号的保留域名 → ngrok 回 `ERR_NGROK_313` → 界面显示「这个固定地址用不了：免费版只能用 ngrok 控制台「Domains」里领到的那一个保留域名…」且不留残留进程 → 清空后照常随机分配 → 运行中输入框锁住、停止后恢复可编辑；`--packaged` 对安装包里的 `.app` 再跑一遍也是「全部通过 ✅」），文本实测 `npm run verify:text` 「全部通过 ✅」，面板实测 `npm run verify:panel` 「全部通过 ✅」（25 项检查，含 4 项加密可见性：加密参数透传到面板、引擎侧连接状态是已加密、设备表里画出徽标与 6 位指纹、参数卡写明 `X25519 + AES-256-GCM`；1.3 GB / 28 文件传完 sha256 逐文件一致，面板中途读到 348 MB/s、结束留存峰值 383 MB/s），端到端（含跨网段阶段）「全部通过 ✅」——其中中继取证那一段给中继注入了一个记录每一条转发字节的子类，事后在拼接的 2.1 MB 里逐个探针检查：`offer` 帧、文件名、正文片段、文本内容**一处都不在**，能看到的只有 `kx-init`/`kx-reply` 握手与之后的密文，打包件实测通过（局域网 8 MB + 经中继 2 MB，两次 sha256 都一致，关房间后中继侧 `{"rooms":0,"waiting":0,"pairs":0}`）。另外校验过 mac 与 win 两套安装包里的 `app.asar` md5 完全相同（同一份应用代码），且包内 13 个文件（`main/index.js`、`main/store.js`、`engine/hub.js`、`engine/peer.js`、`engine/crypto.js`、`engine/protocol.js`、`engine/relay.js`、`engine/tunnel.js`、`common/i18n.js`、`renderer/app.js`、`renderer/index.html`、`preload/index.js`、`relay/node-server.js`）逐个与仓库源码 md5 一致——`relay/node-server.js` 现在也在包里，因为 ngrok 模式要在应用内起本机中继；asar 里还能直接读到 `relay.js` 的 `openRelaySlots`、`tunnel.js` 的 `findNgrok`、`crypto.js` 的 `deriveSession` 与 5 语言的隧道文案，说明跨网与加密功能确实进了安装包而不是只在源码里。

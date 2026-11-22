@@ -7,25 +7,32 @@ const { EventEmitter } = require('events');
 const {
   PROTO_VERSION,
   CHUNK_SIZE,
+  HEADER_SIZE,
   MAX_FILES_PER_OFFER,
   MAX_TEXT_BYTES,
   encodeChunk,
+  chunkHeader,
   decodeChunk,
   sanitizeName,
   sanitizeRel,
   uniquePath,
 } = require('./protocol');
+const { E2EE_VERSION, newHandshake, deriveSession, createRecord } = require('./crypto');
 
 const WS_OPEN = 1;
 const ACCEPT_TIMEOUT = 180_000; // 等待对方点「接收」的最长时间
 const RECEIPT_TIMEOUT = 60_000; // 单个文件落盘确认的最长时间
 const PROGRESS_INTERVAL = 120; // 进度事件最小间隔（毫秒）
 const SEND_PIPELINE = 8; // 同时在途的数据帧数量（8 × 256KB = 2MB 缓冲）
+const KX_TIMEOUT = 5_000; // 加密握手只有一次往返的耐心，超时按旧版本处理
+const CTL_AAD = Buffer.from('skydrop-ctl-v1');
 
 /**
  * 一台已连接设备的会话：负责握手之后的文件收发状态机。
  * 协议约定：文本帧为 JSON 控制消息，二进制帧为文件数据（12 字节头 + 载荷），
  * 同一条连接上的文件严格串行传输，因此接收端只需跟踪「当前文件」。
+ * 双方都是 1.0.5 及以上时，握手后先做一轮 X25519 密钥交换，之后控制帧与数据帧
+ * 全部走 AES-256-GCM；没完成加密握手不会进入 ready，避免头几帧漏成明文。
  */
 class Peer extends EventEmitter {
   constructor(ws, meta = {}) {
@@ -39,6 +46,21 @@ class Peer extends EventEmitter {
     this.destroyed = false;
     this.saveDir = meta.saveDir || null;
     this.autoAccept = Boolean(meta.autoAccept);
+    this._room = String(meta.room || '');
+    this.e2ee = {
+      supported: meta.e2ee !== false,
+      peerSupport: false,
+      active: false,
+      fingerprint: '',
+      reason: '', // 没加密的原因：off（本机设置里关了）/ legacy（对方版本较旧）/ timeout（握手没回音）
+    };
+    this._hs = null;
+    this._peerKx = null;
+    this._peerGotOurs = false;
+    this._kxOpen = false;
+    this._kxReplied = false;
+    this._kxTimer = null;
+    this._sec = null;
 
     this._waiters = new Map();
     this._offersOut = new Map();
@@ -65,31 +87,132 @@ class Peer extends EventEmitter {
   // ---------------------------------------------------------------- 握手
 
   sendHello({ deviceId, name, room }) {
-    this._sendCtl({ type: 'hello', proto: PROTO_VERSION, deviceId, name, room, os: process.platform });
+    this._room = String(room || this._room || '');
+    this._sendPlain({
+      type: 'hello',
+      proto: PROTO_VERSION,
+      deviceId,
+      name,
+      room,
+      os: process.platform,
+      e2ee: this.e2ee.supported ? E2EE_VERSION : 0,
+    });
   }
 
   /** 主机端：处理访客的 hello（房间码校验在 hub 完成），并回复批准结果 */
   onHello(msg) {
     this.peerDeviceId = String(msg.deviceId || '');
     this.peerName = sanitizeName(msg.name || '未知设备');
+    this.e2ee.peerSupport = Number(msg.e2ee) === E2EE_VERSION;
+    // 房间码是派生密钥的一部分：直接沿用对方发来的字节串，免得两边规范化写法不一致
+    this._room = String(msg.room ?? this._room ?? '');
     this.emit('hello', msg);
   }
 
   approvePeer(info) {
-    this._sendCtl({
+    this._sendPlain({
       type: 'approve',
       ok: Boolean(info.ok),
       reason: info.reason || '',
       deviceId: info.deviceId,
       name: info.name,
       proto: PROTO_VERSION,
+      e2ee: this.e2ee.supported && this.e2ee.peerSupport ? E2EE_VERSION : 0,
     });
     if (info.ok) {
-      this.approved = true;
-      this.emit('ready');
+      this._afterApproved();
     } else {
       this.close();
     }
+  }
+
+  // ------------------------------------------------------------ 加密握手
+
+  /** 批准完成后统一走这里：能加密的先握手，握完才对外算「已连接」 */
+  _afterApproved() {
+    if (!this.e2ee.supported) {
+      this.e2ee.reason = 'off';
+      this._fireReady();
+      return;
+    }
+    if (!this.e2ee.peerSupport) {
+      this.e2ee.reason = 'legacy';
+      this._fireReady();
+      return;
+    }
+    // 只有本端已经批准了这条连接，才接受对方发起的密钥交换；
+    // 否则未批准的访客发两帧 kx 就能把会话推到 ready，等于绕过房主的「允许」
+    this._kxOpen = true;
+    this._startKx();
+  }
+
+  _fireReady() {
+    if (this._readyFired) return;
+    this._readyFired = true;
+    if (this._kxTimer) {
+      clearTimeout(this._kxTimer);
+      this._kxTimer = null;
+    }
+    this.approved = true;
+    this.emit('ready');
+  }
+
+  _startKx() {
+    if (this._hs) return;
+    this._hs = newHandshake();
+    this._sendPlain({ type: 'kx-init', v: E2EE_VERSION, p: this._hs.pub, n: this._hs.nonce.toString('base64') });
+    this._kxTimer = setTimeout(() => {
+      this._kxTimer = null;
+      if (this._sec || this.destroyed) return;
+      this.e2ee.reason = 'timeout';
+      this._fireReady();
+    }, KX_TIMEOUT);
+    if (this._kxTimer.unref) this._kxTimer.unref();
+  }
+
+  _onKx(msg, isReply) {
+    if (!this.e2ee.supported || !this._kxOpen || Number(msg.v) !== E2EE_VERSION) return;
+    this.e2ee.peerSupport = true;
+    this._peerKx = { pub: String(msg.p || ''), nonce: String(msg.n || '') };
+    this._startKx();
+    if (!isReply && !this._kxReplied) {
+      this._kxReplied = true;
+      this._sendPlain({ type: 'kx-reply', v: E2EE_VERSION, p: this._hs.pub, n: this._hs.nonce.toString('base64') });
+    }
+    // 对方回了 reply，说明它已经拿到我们的公钥，两边这才算凑齐
+    if (isReply) this._peerGotOurs = true;
+    this._trySecure();
+  }
+
+  _trySecure() {
+    if (this._sec || !this._hs || !this._peerKx || !this._peerGotOurs) return;
+    let session;
+    try {
+      session = deriveSession({
+        privateKey: this._hs.privateKey,
+        ourPub: this._hs.pub,
+        ourNonce: this._hs.nonce,
+        peerPub: this._peerKx.pub,
+        peerNonce: this._peerKx.nonce,
+        roomCode: this._room,
+      });
+    } catch (err) {
+      this.e2ee.reason = 'error';
+      this._fatal(`加密握手失败：${err.message}`);
+      return;
+    }
+    this._sec = {
+      binOut: createRecord(session.sendBin),
+      binIn: createRecord(session.recvBin),
+      ctlOut: createRecord(session.sendCtl),
+      ctlIn: createRecord(session.recvCtl),
+    };
+    this.e2ee.active = true;
+    this.e2ee.fingerprint = session.fingerprint;
+    this.e2ee.reason = '';
+    this._hs.privateKey = null; // 交换完就丢，之后只用派生出的会话密钥
+    this._fireReady();
+    this.emit('secure', { fingerprint: session.fingerprint });
   }
 
   // ---------------------------------------------------------------- 发送
@@ -316,9 +439,10 @@ class Peer extends EventEmitter {
     const { fileId, offset, data } = decodeChunk(frame);
     if (fileId !== recv.file.id) throw new Error('数据帧文件序号不匹配');
     if (offset !== recv.written) throw new Error('数据不连续，传输中断');
-    await recv.handle.write(data, 0, data.length, offset);
-    recv.hash.update(data);
-    recv.written += data.length;
+    const plain = this._sec ? this._sec.binIn.open(data, chunkHeader(fileId, offset)) : data;
+    await recv.handle.write(plain, 0, plain.length, offset);
+    recv.hash.update(plain);
+    recv.written += plain.length;
     recv.file.bytes = recv.written;
     const now = Date.now();
     if (now - recv.lastAt >= PROGRESS_INTERVAL) {
@@ -411,6 +535,26 @@ class Peer extends EventEmitter {
     } catch {
       throw new Error('无法解析的控制帧');
     }
+    if (msg.type === 'kx-init') {
+      this._onKx(msg, false);
+      return;
+    }
+    if (msg.type === 'kx-reply') {
+      this._onKx(msg, true);
+      return;
+    }
+    if (msg.type === 'sec') {
+      if (!this._sec) throw new Error('收到未预期的加密帧');
+      const frame = Buffer.from(String(msg.d || ''), 'base64');
+      // 必须把内层的 await 交回消息链：否则 file-start 还没处理完就到 file-done，接收状态机错位
+      return this._onCtl(JSON.parse(this._sec.ctlIn.open(frame, CTL_AAD).toString('utf8')));
+    }
+    // 加密已经启用就不再收明文业务帧，免得对端（或中间人）掺一条未加密的
+    if (this._sec && !['ping', 'pong', 'error'].includes(msg.type)) throw new Error('加密已启用，拒收明文控制帧');
+    await this._onCtl(msg);
+  }
+
+  async _onCtl(msg) {
     switch (msg.type) {
       case 'hello':
         if (this.peerDeviceId) throw new Error('重复的握手消息');
@@ -421,8 +565,8 @@ class Peer extends EventEmitter {
         if (msg.ok) {
           this.peerDeviceId = String(msg.deviceId || this.peerDeviceId || '');
           this.peerName = sanitizeName(msg.name || this.peerName);
-          this.approved = true;
-          this.emit('ready');
+          this.e2ee.peerSupport = Number(msg.e2ee) === E2EE_VERSION;
+          this._afterApproved();
         } else {
           this.emit('rejected', msg.reason || '对方拒绝');
           this.close();
@@ -501,6 +645,10 @@ class Peer extends EventEmitter {
 
   _teardown(reason) {
     this.destroyed = true;
+    if (this._kxTimer) {
+      clearTimeout(this._kxTimer);
+      this._kxTimer = null;
+    }
     this._cleanupRecv().catch(() => {});
     for (const [key, w] of this._waiters) {
       w.reject(new Error(reason));
@@ -537,6 +685,15 @@ class Peer extends EventEmitter {
 
   _sendCtl(obj) {
     if (this.ws.readyState !== WS_OPEN) return;
+    if (this._sec) {
+      this._sendPlain({ type: 'sec', d: this._sec.ctlOut.seal(Buffer.from(JSON.stringify(obj), 'utf8'), CTL_AAD).toString('base64') });
+      return;
+    }
+    this._sendPlain(obj);
+  }
+
+  _sendPlain(obj) {
+    if (this.ws.readyState !== WS_OPEN) return;
     try {
       this.ws.send(JSON.stringify(obj));
     } catch (err) {
@@ -544,10 +701,18 @@ class Peer extends EventEmitter {
     }
   }
 
+  /** 帧头 12 字节保持明文（同时作为 AAD，把密文钉死在「这个文件的这个偏移」），载荷整体换成密文 */
+  _sealFrame(frame) {
+    const buf = Buffer.from(frame.buffer ?? frame, frame.byteOffset ?? 0, frame.byteLength ?? frame.length);
+    const head = buf.subarray(0, HEADER_SIZE);
+    return Buffer.concat([head, this._sec.binOut.seal(buf.subarray(HEADER_SIZE), head)]);
+  }
+
   _sendBin(frame) {
     if (this.ws.readyState !== WS_OPEN) return Promise.reject(new Error('连接已断开'));
+    const out = this._sec ? this._sealFrame(frame) : frame;
     return new Promise((resolve, reject) => {
-      this.ws.send(frame, { binary: true }, (err) => (err ? reject(err) : resolve()));
+      this.ws.send(out, { binary: true }, (err) => (err ? reject(err) : resolve()));
     });
   }
 

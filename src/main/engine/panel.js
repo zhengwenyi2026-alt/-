@@ -175,6 +175,7 @@
         kv('自动接收文件', set.autoAccept ? t('开') : t('关')),
         kv('自动允许加入', set.autoApprove ? t('开') : t('关')),
         kv('允许公网地址', set.allowPublic ? t('开') : t('关')),
+        kv('端到端加密', set.e2ee === false ? t('关') : t('开')),
       ]),
       room
         ? grid([
@@ -194,6 +195,7 @@
             kv('房主', s.joined.name),
             kv('房主地址', s.joined.ip, true),
             kv('连接方式', s.joined.via === 'relay' ? t('互联网中继') : t('局域网直连')),
+            kv('加密状态', secText(s.joined.sec)),
           ])
         : null,
       s.outgoing ? grid([kv('正在加入', s.outgoing.codeDisplay || s.outgoing.room, true), kv('目标', s.outgoing.host || s.outgoing.status)]) : null,
@@ -209,18 +211,30 @@
     return card('概览', nodes);
   }
 
+  /** 一条连接的加密状态，与窗口里的徽标同源 */
+  function secText(sec) {
+    if (!sec || !sec.active) {
+      if (sec && sec.reason === 'off') return t('未加密：本机已关闭');
+      if (sec && sec.reason === 'legacy') return t('未加密：对方未开启加密');
+      if (sec && sec.reason === 'timeout') return t('未加密：对方没有响应加密握手');
+      return t('未加密');
+    }
+    return t('已加密 · 指纹 {fp}', { fp: sec.fingerprint });
+  }
+
   function peersCard(s) {
     const peers = (s.peers || []).map((p) => [
       p.name,
       p.ip,
       p.via === 'relay' ? t('互联网中继') : t('局域网直连'),
+      secText(p.sec),
       dur(Date.now() - (p.since || Date.now())),
       p.deviceId,
     ]);
     const reqs = (s.joinRequests || []).map((r) => [r.name, r.ip, t('等待房主确认'), r.deviceId]);
     const vis = (s.visible || []).map((r) => [r.name, r.ip, r.room, String(r.port)]);
     return card('设备与连接', [
-      table(['设备名', '地址', '连接方式', '已连接时长', '设备 ID'], peers),
+      table(['设备名', '地址', '连接方式', '加密', '已连接时长', '设备 ID'], peers),
       el('h2', null, t('等待确认的加入请求')),
       table(['设备名', '地址', '状态', '设备 ID'], reqs),
       el('h2', null, t('附近的房间')),
@@ -371,6 +385,9 @@
     return card('协议与参数', [
       grid([
         kv('协议版本', l.proto),
+        kv('端到端加密', l.e2eeVersion ? `v${l.e2eeVersion} · X25519 + AES-256-GCM` : t('未启用')),
+        kv('加密帧开销', t('{n} 字节', { n: l.e2eeOverhead })),
+        kv('指纹', t('{n} 位 · 字符集 {m}', { n: l.e2eeFpLength, m: l.e2eeFpAlphabet })),
         kv('分片大小', bytes(l.chunkSize)),
         kv('分片帧头', t('{n} 字节', { n: l.headerSize })),
         kv('并发分片', l.sendPipeline),

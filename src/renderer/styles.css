@@ -348,5 +348,10 @@ button.primary.small { padding: 5px 12px; font-size: 12px; }
   border: 1px solid rgba(97, 208, 255, .28);
 }
 .target .via { margin-left: 2px; }
+/* 未加密的连接用琥珀色，一眼能和已加密的蓝色徽标区分开 */
+.via.warn {
+  color: #ffc46b; background: rgba(255, 182, 72, .13);
+  border-color: rgba(255, 182, 72, .32);
+}
 
 [hidden] { display: none !important; }

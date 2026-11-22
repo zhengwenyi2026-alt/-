@@ -95,6 +95,10 @@
               <div>
                 <div class="kv"><span data-i18n="已加入房间">已加入房间</span><b id="joinedRoom">—</b></div>
                 <div class="kv"><span data-i18n="房主">房主</span><b id="joinedHost">—</b></div>
+                <div class="kv">
+                  <span data-i18n="加密">加密</span>
+                  <b id="joinedSec" data-i18n-title="与对方各自核对这 6 位指纹，两边一致才说明中继没有冒充" title="与对方各自核对这 6 位指纹，两边一致才说明中继没有冒充">—</b>
+                </div>
               </div>
               <button class="ghost small danger" id="leaveBtn" data-i18n="离开房间">离开房间</button>
             </div>
@@ -221,6 +225,10 @@
       <label class="switch"><input type="checkbox" id="setAutoAccept" /><span data-i18n="自动接收文件（不再逐个确认）">自动接收文件（不再逐个确认）</span></label>
       <label class="switch"><input type="checkbox" id="setAutoApprove" /><span data-i18n="自动允许房间码正确的设备加入">自动允许房间码正确的设备加入</span></label>
       <label class="switch"><input type="checkbox" id="setAllowPublic" /><span data-i18n="允许非私网地址连接（跨网段 / VPN 场景）">允许非私网地址连接（跨网段 / VPN 场景）</span></label>
+      <label class="switch">
+        <input type="checkbox" id="setE2ee" data-i18n-title="文件与文本在离开本机前就加密，中继只能看到密文；对方没开加密（含旧版本）时自动退回明文，改动对之后的连接生效" title="文件与文本在离开本机前就加密，中继只能看到密文；对方没开加密（含旧版本）时自动退回明文，改动对之后的连接生效" />
+        <span data-i18n="端到端加密（双方都支持时启用）">端到端加密（双方都支持时启用）</span>
+      </label>
       <div class="field">
         <span data-i18n="本机传输面板">本机传输面板</span>
         <div class="row">

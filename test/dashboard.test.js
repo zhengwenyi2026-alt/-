@@ -145,6 +145,14 @@ test('面板快照：房间、任务、历史与统计对得上', async () => {
   assert.equal(snap.limits.relayPingMs, 25_000, '中继心跳要能传给面板');
   assert.equal(snap.limits.pairTimeoutMs, 20_000, '配对超时要能传给面板');
   assert.equal(Array.isArray(snap.limits.relayBackoff) && snap.limits.relayBackoff.length, 5, '重连退避表要完整');
+  assert.equal(snap.limits.e2eeVersion, 1, '加密协议版本要传给面板');
+  assert.equal(snap.limits.e2eeOverhead, 20, '每帧开销 = 4 字节计数器 + 16 字节标签');
+  assert.equal(snap.limits.e2eeFpLength, 6, '指纹长度要报得出来');
+  assert.equal(snap.limits.e2eeFpAlphabet, 32, '指纹字符集要去掉易混字符');
+  const snapSec = (snap.peers[0] || {}).sec || {};
+  assert.equal(snapSec.active, true, '引擎之间的连接要报成已加密');
+  assert.match(snapSec.fingerprint, /^[A-HJ-NP-Z2-9]{6}$/, '面板要能直接展示可核对的指纹');
+  assert.equal(snapshot(guest, LIMITS).peers[0].sec.fingerprint, snapSec.fingerprint, '两侧指纹必须一致');
   host.peakRate = 5 * 1024 * 1024;
   assert.equal(
     snapshot(host, LIMITS).totals.peakRate,

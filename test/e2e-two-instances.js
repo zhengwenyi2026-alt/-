@@ -93,7 +93,16 @@ async function api(page, fn, ...args) {
   fs.mkdirSync(OUT, { recursive: true });
   // 本地起一个真中继：跨网这一段的界面、引擎、配对状态机全都是真的
   const { createRelayServer } = await import('../relay/node-server.js');
-  const relaySrv = await createRelayServer({ port: 0, host: '127.0.0.1' });
+  const { Relay } = await import('../relay/pairing.js');
+  // 中继视角取证：配对完成后中继只做字节搬运，把 message() 收到的每一帧原样留一份底
+  const relayWire = [];
+  class TappedRelay extends Relay {
+    message(ctx, data, isBinary) {
+      relayWire.push(Buffer.isBuffer(data) ? Buffer.from(data) : Buffer.from(String(data), 'utf8'));
+      return super.message(ctx, data, isBinary);
+    }
+  }
+  const relaySrv = await createRelayServer({ port: 0, host: '127.0.0.1', relay: new TappedRelay() });
   const relayUrl = relaySrv.origin;
   log(`本地中继已启动：${relayUrl}`);
   const work = await fsp.mkdtemp(path.join(os.tmpdir(), 'skydrop-e2e-'));
@@ -148,6 +157,19 @@ async function api(page, fn, ...args) {
     await waitFor(() => b.page.$eval('#joinLive', (n) => !n.hidden), 20_000, 'B 未进入已加入状态');
     await waitFor(() => a.page.$$eval('.peer', (n) => n.length > 0), 20_000, 'A 未显示已连接设备');
     log('两台设备已互相连接');
+    // 局域网这一路同样端到端加密（不经过中继，防的是内网嗅探与路由器日志）
+    const lanSec = await waitFor(
+      async () => {
+        const sa = await api(a.page, 'getState');
+        const sb = await api(b.page, 'getState');
+        const pa = (sa.peers[0] || {}).sec || {};
+        const pb = (sb.joined || {}).sec || {};
+        return pa.active && pb.active && pa.fingerprint === pb.fingerprint ? { fp: pa.fingerprint } : null;
+      },
+      20_000,
+      '局域网直连没有进入端到端加密'
+    );
+    log(`局域网直连同样已加密，两侧指纹 ${lanSec.fp}`);
     await b.page.screenshot({ path: path.join(OUT, '3-b-已加入房间.png') });
 
     // ---- B 通过界面发送：先模拟拖拽（合成 File 无路径，应给出提示），再用真实路径发起
@@ -335,6 +357,49 @@ async function api(page, fn, ...args) {
     }
     log(`经中继传输 2MB 完成，sha256 一致（${crossGot.length} 字节）`);
     await a.page.screenshot({ path: path.join(OUT, '12-a-中继传输完成.png') });
+
+    // ---- 端到端加密：中继侧只该看到密文，两侧指纹必须一致
+    const secretNote = `中继看不到这段话 ${Date.now().toString(36)}`;
+    await api(b.page, 'sendText', { peerIds: [relayPeer.deviceId], text: secretNote, asFile: false });
+    await waitFor(async () => (await api(a.page, 'getState')).texts.some((x) => x.text === secretNote), 20_000, 'A 没有收到经中继传来的文本');
+    log('经中继传送文本已到达，界面正常展示');
+
+    const stSecA = await api(a.page, 'getState');
+    const stSecB = await api(b.page, 'getState');
+    const secA = (stSecA.peers.find((p) => p.via === 'relay') || {}).sec || {};
+    const secB = (stSecB.joined || {}).sec || {};
+    if (!secA.active || !secB.active) throw new Error(`两侧没有都进入加密状态：A=${JSON.stringify(secA)} B=${JSON.stringify(secB)}`);
+    if (secA.fingerprint !== secB.fingerprint) throw new Error(`两侧指纹对不上：A=${secA.fingerprint} B=${secB.fingerprint}`);
+    if (!/^[A-HJ-NP-Z2-9]{6}$/.test(secA.fingerprint)) throw new Error(`指纹格式异常：${secA.fingerprint}`);
+    const badgesA = await a.page.$$eval('.peer .via', (ns) => ns.map((n) => n.textContent.trim()));
+    if (!badgesA.some((s) => /已加密/.test(s) && s.includes(secA.fingerprint))) throw new Error(`A 侧加密徽标异常：${JSON.stringify(badgesA)}`);
+    const secBText = await b.page.$eval('#joinedSec', (n) => n.textContent.trim());
+    if (!/已加密/.test(secBText) || !secBText.includes(secB.fingerprint)) throw new Error(`B 侧指纹展示异常：${secBText}`);
+    log(`两侧界面各自显示指纹 ${secA.fingerprint}（A：${badgesA.join(' / ')}｜B：${secBText}）`);
+
+    const wire = Buffer.concat(relayWire);
+    const mustSee = {
+      '明文 hello 帧（证明明文本能看见）': Buffer.from('{"type":"hello"'),
+      '加密握手帧': Buffer.from('kx-init'),
+      '密文控制帧': Buffer.from('"type":"sec"'),
+    };
+    for (const [what, probe] of Object.entries(mustSee)) {
+      if (!wire.includes(probe)) throw new Error(`中继视角里缺少${what}，取证不成立（共 ${relayWire.length} 帧）`);
+    }
+    const mustNotSee = {
+      'offer 帧': Buffer.from('{"type":"offer"'),
+      'file-start 帧': Buffer.from('{"type":"file-start"'),
+      'receipt 帧': Buffer.from('{"type":"receipt"'),
+      '文件名': Buffer.from('跨网文件.bin'),
+      '正文开头': cross.subarray(0, 64),
+      '正文结尾': cross.subarray(cross.length - 64),
+      '文本内容': Buffer.from(secretNote),
+    };
+    for (const [what, probe] of Object.entries(mustNotSee)) {
+      if (wire.includes(probe)) throw new Error(`中继视角里出现了${what}，端到端加密没有生效`);
+    }
+    log(`中继取证：${relayWire.length} 帧 / ${wire.length} 字节，握手与密文可见，文件名、正文、文本内容一处不漏地看不到`);
+    await a.page.screenshot({ path: path.join(OUT, '13-a-端到端加密.png') });
 
     // 关掉房间：槽位要立刻从中继上摘掉，不能留孤儿连接
     await a.page.click('#closeRoomBtn');

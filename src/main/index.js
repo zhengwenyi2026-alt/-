@@ -97,6 +97,8 @@ function initHub() {
     relayProvider,
     relayUrl,
     ngrokDomain: String(store.get('ngrokDomain', '') || ''),
+    // 端到端加密默认开启，只有在跟旧版本对端出问题时才需要手动关掉
+    e2ee: store.get('e2ee', true) !== false,
     appVersion: app.getVersion(),
   });
   hub.on('event', push);
@@ -279,6 +281,7 @@ function registerIpc() {
         relayProvider: hub.relayProvider,
         relayUrl: hub.relayUrl,
         ngrokDomain: hub.ngrokDomain,
+        e2ee: hub.e2eeEnabled,
         language: hub.language,
       });
       return true;

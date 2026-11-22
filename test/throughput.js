@@ -1,7 +1,8 @@
 'use strict';
 
-// 吞吐量测量（手动运行：node test/throughput.js [文件大小 MB] [--relay]）
+// 吞吐量测量（手动运行：node test/throughput.js [文件大小 MB] [--relay] [--no-e2ee]）
 // --relay 走本地中继（同机两跳），用来量化中继本身多花的钱。
+// --no-e2ee 关掉端到端加密，用来量出加密这一层多花的钱（默认开启）。
 // 不进入 npm test，避免 CI 因磁盘 IO 波动误报。
 const crypto = require('crypto');
 const fsp = require('fs/promises');
@@ -12,6 +13,7 @@ const { Hub } = require('../src/main/engine/hub');
 
 const MB = Number((process.argv.slice(2).find((a) => !a.startsWith('--'))) || 64);
 const useRelay = process.argv.includes('--relay');
+const withE2EE = !process.argv.includes('--no-e2ee');
 
 const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 
@@ -31,8 +33,8 @@ const wait = (ms) => new Promise((res) => setTimeout(res, ms));
     ? { relayEnabled: true, relayProvider: 'custom', relayUrl: relaySrv.origin }
     : {};
 
-  const host = new Hub({ deviceName: '测速主机', saveDir: path.join(dir, 'in'), autoApprove: true, ...relayOpts });
-  const guest = new Hub({ deviceName: '测速访客', saveDir: path.join(dir, 'out'), ...relayOpts });
+  const host = new Hub({ deviceName: '测速主机', saveDir: path.join(dir, 'in'), autoApprove: true, e2ee: withE2EE, ...relayOpts });
+  const guest = new Hub({ deviceName: '测速访客', saveDir: path.join(dir, 'out'), e2ee: withE2EE, ...relayOpts });
   const room = await host.startRoom();
   if (useRelay) {
     for (let i = 0; i < 150 && host.state().relay.endpoints < 3; i += 1) await wait(100);
@@ -44,6 +46,17 @@ const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 
   let startedAt = 0;
   let lastLog = 0;
+  // 速率数字要能说清是哪条通道跑出来的：先等加密握手落地，把两侧的连接状态打出来
+  const secOf = (hub) => {
+    const st = hub.state();
+    return (st.joined && st.joined.sec) || (st.peers[0] && st.peers[0].sec) || null;
+  };
+  for (let i = 0; i < 50 && !(secOf(host) || {}).active && !((secOf(host) || {}).reason); i += 1) await wait(100);
+  const secA = secOf(host);
+  const secB = secOf(guest);
+  const secText = (s) => (s && s.active ? `已加密（指纹 ${s.fingerprint}）` : `未加密（${(s && s.reason) || '未知'}）`);
+  console.log(`通道：${useRelay ? '本机中继（两跳）' : '本机回环直连'}｜加密开关 ${withE2EE ? '开' : '关'}｜接收方 ${secText(secA)}｜发送方 ${secText(secB)}`);
+  if (secA && secB && secA.fingerprint !== secB.fingerprint) throw new Error('两侧指纹不一致');
   const offerWait = new Promise((res) => host.on('event', (e) => e.type === 'offer-in' && res(e.offer)));
   const doneWait = new Promise((res) => {
     host.on('event', (e) => {

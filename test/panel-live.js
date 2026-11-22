@@ -224,6 +224,34 @@ async function probe(url) {
     check(after.limits.relayPingMs > 0 && after.limits.pairTimeoutMs > 0 && after.limits.relayBackoff.length === 5, '中继参数透传到面板', `${after.limits.relayPingMs}/${after.limits.pairTimeoutMs}`);
     check(after.history[0].files.length === sent.count, '历史条目带全部文件明细', `${after.history[0].files.length}/${sent.count}`);
 
+    // ---- 端到端加密：数据与渲染两头都要能看到
+    const secPeer = (after.peers || [])[0] || {};
+    check(
+      after.limits.e2eeVersion === 1 && after.limits.e2eeOverhead === 20 && after.limits.e2eeFpLength === 6 && after.limits.e2eeFpAlphabet === 32,
+      '加密参数透传到面板',
+      `v${after.limits.e2eeVersion} · 开销 ${after.limits.e2eeOverhead} · 指纹 ${after.limits.e2eeFpLength}×${after.limits.e2eeFpAlphabet}`
+    );
+    check(secPeer.sec && secPeer.sec.active === true, '引擎侧连接状态是已加密', JSON.stringify(secPeer.sec || {}));
+    if (shot && secPeer.sec && secPeer.sec.active) {
+      const peersDom = await shot.evaluate(async () => {
+        for (let i = 0; i < 60; i += 1) {
+          const cards = [...document.querySelectorAll('.card')];
+          const card = cards.find((c) => /设备与连接|Devices|接続|기기/.test(c.innerText));
+          const row = card && [...card.querySelectorAll('tbody tr')][0];
+          if (row && /指纹|code|指紋|지문/i.test(row.innerText)) return row.innerText.replace(/\s+/g, ' ');
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        const card = [...document.querySelectorAll('.card')].find((c) => /设备与连接|Devices/.test(c.innerText));
+        return card ? card.innerText.replace(/\s+/g, ' ').slice(0, 200) : null;
+      });
+      check(!!peersDom && peersDom.includes(secPeer.sec.fingerprint), '面板的设备表里画出了加密徽标与指纹', String(peersDom).slice(0, 160));
+      const paramsDom = await shot.evaluate(() => {
+        const card = [...document.querySelectorAll('.card')].find((c) => /协议与参数|Protocol|プロトコル|프로토콜/.test(c.innerText));
+        return card ? card.innerText.replace(/\s+/g, ' ') : '';
+      });
+      check(/AES-256-GCM/.test(paramsDom), '参数卡里写明算法', paramsDom.slice(0, 160));
+    }
+
     const sha = async (p) => crypto.createHash('sha256').update(await fsp.readFile(p)).digest('hex');
     for (const name of names) {
       const same = (await sha(path.join(src, name))) === (await sha(path.join(recv, name)));

@@ -16,6 +16,7 @@ const http = require('http');
 const os = require('os');
 
 const { PROTO_VERSION, CHUNK_SIZE, HEADER_SIZE, MAX_FILES_PER_OFFER, MAX_TEXT_BYTES } = require('./protocol');
+const { E2EE_VERSION, TAG_SIZE, CTR_SIZE, FP_ALPHABET, FP_LENGTH } = require('./crypto');
 const { SEND_PIPELINE } = require('./peer');
 const { RELAY_SLOTS, RELAY_BACKOFF, PAIR_TIMEOUT, RELAY_PING } = require('./relay');
 const { ALPHABET, CODE_LENGTH } = require('./roomCode');
@@ -132,6 +133,10 @@ function snapshot(hub, limits) {
     totals: totalsOf(hub),
     limits: {
       proto: PROTO_VERSION,
+      e2eeVersion: E2EE_VERSION,
+      e2eeOverhead: CTR_SIZE + TAG_SIZE,
+      e2eeFpLength: FP_LENGTH,
+      e2eeFpAlphabet: FP_ALPHABET.length,
       chunkSize: CHUNK_SIZE,
       headerSize: HEADER_SIZE,
       maxFilesPerOffer: MAX_FILES_PER_OFFER,

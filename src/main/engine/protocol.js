@@ -21,12 +21,15 @@ const MAX_TEXT_BYTES = 32 * 1024;
 
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
+function chunkHeader(fileId, offset) {
+  const head = Buffer.allocUnsafe(HEADER_SIZE);
+  head.writeUInt32BE(fileId >>> 0, 0);
+  head.writeBigUInt64BE(BigInt(offset), 4);
+  return head;
+}
+
 function encodeChunk(fileId, offset, data) {
-  const frame = Buffer.allocUnsafe(HEADER_SIZE + data.length);
-  frame.writeUInt32BE(fileId >>> 0, 0);
-  frame.writeBigUInt64BE(BigInt(offset), 4);
-  data.copy(frame, HEADER_SIZE);
-  return frame;
+  return Buffer.concat([chunkHeader(fileId, offset), data]);
 }
 
 function decodeChunk(frame) {
@@ -92,6 +95,7 @@ module.exports = {
   MAX_FILES_PER_OFFER,
   MAX_TEXT_BYTES,
   encodeChunk,
+  chunkHeader,
   decodeChunk,
   sanitizeName,
   sanitizeRel,

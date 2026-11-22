@@ -1469,3 +1469,208 @@ test('固定地址：输入框、设置透传、状态回读三处名字对得�
   assert.match(mainSrc, /ngrokDomain: hub\.ngrokDomain,/, '主进程要持久化它');
   assert.match(mainSrc, /ngrokDomain: String\(store\.get\('ngrokDomain'/, '启动时要读回来');
 });
+
+// ---------------------------------------------------------------- 端到端加密
+
+const E2EE = require('../src/main/engine/crypto');
+const { Peer } = require('../src/main/engine/peer');
+
+test('端到端加密：密钥交换、指纹与记录层的性质', () => {
+  const a = E2EE.newHandshake();
+  const b = E2EE.newHandshake();
+  const session = (x, y, room) =>
+    E2EE.deriveSession({ privateKey: x.privateKey, ourPub: x.pub, ourNonce: x.nonce, peerPub: y.pub, peerNonce: y.nonce, roomCode: room });
+  const sa = session(a, b, 'QQ7T4L');
+  const sb = session(b, a, 'QQ7T4L');
+
+  assert.equal(sa.fingerprint, sb.fingerprint, '两侧要算出同一个指纹');
+  assert.equal(sa.fingerprint.length, E2EE.FP_LENGTH, `指纹要正好 ${E2EE.FP_LENGTH} 位，短了不好念`);
+  for (const ch of sa.fingerprint) assert.ok(E2EE.FP_ALPHABET.includes(ch), `指纹字符 ${ch} 不在字母表里`);
+  assert.ok(!/[IO01]/.test(E2EE.FP_ALPHABET), '字母表不能含易混字符');
+  assert.equal(Buffer.compare(sa.sendBin, sb.recvBin), 0, '我发的方向必须正好是对端收的方向');
+  assert.notEqual(Buffer.compare(sa.sendBin, sa.recvBin), 0, '同一连接的两个方向密钥要不同');
+  assert.equal(sa.weAreFirst, !sb.weAreFirst, '谁是「甲」必须两边互补');
+
+  const rec = E2EE.createRecord(sa.sendBin);
+  const open = E2EE.createRecord(sb.recvBin);
+  const plain = crypto.randomBytes(1024);
+  const aad = Buffer.from('aad');
+  const frame = rec.seal(plain, aad);
+  assert.equal(frame.length, plain.length + 20, '开销固定是 4 字节计数器 + 16 字节标签');
+  assert.ok(!frame.includes(plain.subarray(0, 32)), '密文里不能出现明文片段');
+  assert.deepEqual(open.open(frame, aad), plain, '往返要一致');
+
+  const fresh = () => ({ x: E2EE.createRecord(sa.sendBin), y: E2EE.createRecord(sb.recvBin) });
+  assert.throws(() => { const { y } = fresh(); const g = fresh().x.seal(plain, aad); y.open(g, Buffer.from('other')); }, /unable to authenticate|Unsupported state/, 'AAD 不对必须拒收');
+  assert.throws(() => { const { x, y } = fresh(); const g = x.seal(plain, aad); g[g.length - 1] ^= 1; y.open(g, aad); }, /unable to authenticate|Unsupported state/, '改一个比特必须拒收');
+  assert.throws(() => { const { x, y } = fresh(); x.seal(plain, aad); y.open(x.seal(plain, aad), aad); }, /顺序异常/, '跳过一帧（重放/乱序）必须拒收');
+  assert.throws(() => { const { y } = fresh(); y.open(Buffer.from([1, 2, 3]), aad); }, /长度不足/);
+  assert.throws(() => E2EE.createRecord(Buffer.alloc(8)), /记录密钥长度不对/);
+  assert.throws(() => {
+    E2EE.deriveSession({ privateKey: a.privateKey, ourPub: a.pub, ourNonce: a.nonce, peerPub: 'AAAA', peerNonce: b.nonce, roomCode: 'QQ7T4L' });
+  }, /对方的密钥格式不对/);
+
+  // 房间码参与派生：抄错房间码不可能凑出同一条会话
+  assert.notEqual(session(a, b, 'QQ7T4M').fingerprint, sa.fingerprint);
+  // 中继若替换掉其中一方的公钥，两侧指纹必然对不上——这正是让人核对指纹的意义
+  const evil = E2EE.newHandshake();
+  assert.notEqual(session(a, evil, 'QQ7T4L').fingerprint, sa.fingerprint);
+});
+
+/** 一对内存里的「WebSocket」，把两端发出的每一帧都抄进 wire，用来冒充中继视角 */
+function wsShimPair() {
+  const mk = () => {
+    const s = new (require('events').EventEmitter)();
+    s.readyState = 1;
+    s.frames = [];
+    s.peer = null;
+    s.send = (data, opts, cb) => {
+      const isBinary = Buffer.isBuffer(data);
+      const buf = isBinary ? Buffer.from(data) : Buffer.from(String(data), 'utf8');
+      s.frames.push(buf);
+      setImmediate(() => {
+        if (s.peer && s.peer.readyState === 1) s.peer.emit('message', buf, isBinary);
+      });
+      const done = typeof opts === 'function' ? opts : cb;
+      if (typeof done === 'function') setImmediate(() => done());
+    };
+    s.close = () => {
+      if (s.readyState !== 1) return;
+      s.readyState = 3;
+      setImmediate(() => s.emit('close'));
+    };
+    return s;
+  };
+  const a = mk();
+  const b = mk();
+  a.peer = b;
+  b.peer = a;
+  return { a, b, wire: () => Buffer.concat(a.frames.concat(b.frames)) };
+}
+
+async function encryptedTransfer(hostOpts, guestOpts) {
+  const src = tmpDir(`e2ee-src-${Math.random().toString(36).slice(2, 7)}`);
+  const name = '机密文件-不许明文.txt';
+  const payload = crypto.randomBytes(600 * 1024); // 跨两个 256KB 数据帧
+  await fsp.writeFile(path.join(src, name), payload);
+  const { a, b, wire } = wsShimPair();
+  const host = new Peer(a, { role: 'host', saveDir: tmpDir(`e2ee-host-${Math.random().toString(36).slice(2, 7)}`), ...hostOpts });
+  const guest = new Peer(b, { role: 'guest', saveDir: tmpDir(`e2ee-guest-${Math.random().toString(36).slice(2, 7)}`), ...guestOpts });
+  host.setSelf({ deviceId: 'H', name: '主机房' });
+  guest.setSelf({ deviceId: 'G', name: '访客机' });
+  const readyBoth = Promise.all([once(host, 'ready'), once(guest, 'ready')]);
+  guest.sendHello({ deviceId: 'G', name: '访客机', room: 'QQ7T4L' });
+  await once(host, 'hello');
+  host.approvePeer({ ok: true, deviceId: 'H', name: '主机房' });
+  await readyBoth;
+
+  // events.once 在 Node 25 里返回参数数组，下面每一处取值都要解构
+  const doneP = once(host, 'transfer-done');
+  const offerP = once(guest, 'offer-in');
+  host.sendFiles([{ absPath: path.join(src, name), name, size: payload.length }]);
+  const [rec] = await offerP;
+  guest.acceptIncoming(rec.transferId, guest.saveDir);
+  const [done] = await doneP;
+  assert.equal(done.ok, true, `传输没成功：${done.reason}`);
+  const got = await fsp.readFile(path.join(guest.saveDir, name));
+  assert.equal(crypto.createHash('sha256').update(got).digest('hex'), crypto.createHash('sha256').update(payload).digest('hex'));
+  return { host, guest, a, wire, payload, name };
+}
+
+test('端到端加密：双方都支持时，中继视角里看不到文件名与正文', async () => {
+  const { host, guest, wire, payload, name } = await encryptedTransfer({}, {});
+  assert.equal(host.e2ee.active, true);
+  assert.equal(guest.e2ee.active, true);
+  assert.equal(host.e2ee.fingerprint, guest.e2ee.fingerprint);
+
+  const seen = wire();
+  assert.ok(seen.includes(Buffer.from('"type":"sec"')), '控制帧应被包成 sec 帧');
+  assert.ok(seen.includes(Buffer.from('kx-init')), '要能看到明文握手帧（公钥本来就是公开的）');
+  assert.ok(!seen.includes(Buffer.from(name)), '文件名不能以明文出现在线上');
+  assert.ok(!seen.includes(Buffer.from('{"type":"offer"')), 'offer 必须整体在密文里');
+  assert.ok(!seen.includes(payload.subarray(0, 64)), '正文不能以明文出现在线上');
+  assert.ok(!seen.includes(payload.subarray(payload.length - 64)), '最后一帧同样要是密文');
+  host.close();
+  guest.close();
+});
+
+test('端到端加密：退回明文的三种情形，加密会话拒收明文业务帧', async () => {
+  const { host, guest, wire } = await encryptedTransfer({}, { e2ee: false });
+  assert.equal(host.e2ee.active, false);
+  assert.equal(host.e2ee.reason, 'legacy');
+  assert.equal(guest.e2ee.supported, false);
+  assert.ok(wire().includes(Buffer.from('{"type":"offer"')), '旧版本对端就是原来的明文协议');
+  host.close();
+  guest.close();
+
+  // 已加密的会话上塞一条明文业务帧：必须当场拒掉并报错，而不是当成正常消息处理
+  const fresh = await encryptedTransfer({}, {});
+  const errP = once(fresh.host, 'protocol-error');
+  fresh.a.emit('message', Buffer.from(JSON.stringify({ type: 'text', textId: 'x1', text: '假装没加密', size: 6 })), false);
+  const [reason] = await errP;
+  assert.match(String(reason), /加密已启用，拒收明文控制帧/);
+  fresh.host.close();
+  fresh.guest.close();
+
+  // 本机自己关掉：原因要落在自己身上，不能赖对方版本旧
+  const off = await encryptedTransfer({ e2ee: false }, {});
+  assert.equal(off.host.e2ee.reason, 'off', '本机关闭要报 off');
+  assert.equal(off.host.e2ee.active, false);
+  assert.equal(off.guest.e2ee.reason, 'legacy', '访客看到的是「对方没开加密」');
+  assert.ok(off.wire().includes(Buffer.from('{"type":"offer"')), '关闭后就是原来的明文协议');
+  off.host.close();
+  off.guest.close();
+});
+
+test('端到端加密：设置开关从界面一路贯通到新建连接', () => {
+  const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+  const hub = new Hub({ deviceName: '加密开关', saveDir: tmpDir('e2ee-set'), udpPort: 47899, e2ee: false });
+  assert.equal(hub.e2eeEnabled, false, '构造参数要能直接关掉');
+  assert.equal(hub.state().settings.e2ee, false, '状态要把开关报给界面');
+  hub.setSettings({ e2ee: true });
+  assert.equal(hub.e2eeEnabled, true);
+  assert.equal(hub.state().settings.e2ee, true);
+  hub.setSettings({ e2ee: false });
+  assert.equal(hub.e2eeEnabled, false, '关掉之后新建的连接不再加密');
+  hub.dispose();
+
+  const hubSrc = read('src/main/engine/hub.js');
+  const mainSrc = read('src/main/index.js');
+  const appSrc = read('src/renderer/app.js');
+  assert.match(hubSrc, /e2ee: this\.e2eeEnabled/, '新建 Peer 时要把开关带下去');
+  assert.match(hubSrc, /typeof patch\.e2ee === 'boolean'/, 'setSettings 要认这个字段');
+  assert.match(hubSrc, /settings:.*e2ee:/s, '状态里要回报开关');
+  assert.match(mainSrc, /e2ee: store\.get\('e2ee', true\) !== false/, '启动时读回设置，默认开');
+  assert.match(mainSrc, /e2ee: hub\.e2eeEnabled,/, '保存设置时要把开关写进去');
+  assert.match(appSrc, /e2ee: \$\('setE2ee'\)\.checked/, '界面上的勾选要进设置');
+  assert.match(appSrc, /\$\('setE2ee'\)\.checked = st\.settings\.e2ee !== false/, '状态要回填勾选');
+});
+
+test('端到端加密：没批准的访客拿 kx 帧也换不到「已连接」', async () => {
+  const host = new Hub({ deviceName: '不松口的房主', saveDir: tmpDir('host-kxgate'), autoApprove: false, e2ee: true });
+  const room = await host.startRoom();
+  const ws = new WebSocket(`ws://127.0.0.1:${room.port}/`);
+  await once(ws, 'open');
+  const seen = [];
+  ws.on('message', (data, isBinary) => {
+    if (isBinary) return;
+    try {
+      seen.push(JSON.parse(Buffer.from(data).toString('utf8')));
+    } catch {}
+  });
+
+  const hs = E2EE.newHandshake();
+  const kx = (type) => JSON.stringify({ type, v: E2EE.E2EE_VERSION, p: hs.pub, n: hs.nonce.toString('base64') });
+  ws.send(JSON.stringify({ type: 'hello', proto: PROTO_VERSION, deviceId: 'raw-kx', name: '抢跑访客', room: room.code, os: 'darwin', e2ee: E2EE.E2EE_VERSION }));
+  await nextEvent(host, 'join-request', (e) => e.deviceId === 'raw-kx');
+  // 房主一次「允许」都没点，访客自己把 kx-init / kx-reply 两头都发一遍，试图凑齐会话
+  ws.send(kx('kx-init'));
+  ws.send(kx('kx-reply'));
+  ws.send(JSON.stringify({ type: 'offer', transferId: 'raw-kx-t', files: [{ id: 1, name: 'a.txt', size: 1 }], totalSize: 1 }));
+  const errFrame = await nextFrame(ws, (f) => f.type === 'error');
+  assert.match(errFrame.msg, /未经批准/, '加密握手不能绕过房主的批准');
+  assert.equal(seen.some((f) => String(f.type).startsWith('kx')), false, '未批准的连接一条 kx 都不该回');
+  assert.equal(host.state().peers.length, 0, '未批准的连接不能进已连接设备表');
+  ws.close();
+  host.dispose();
+});

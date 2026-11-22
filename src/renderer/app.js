@@ -207,6 +207,17 @@ function renderHeader(st) {
   $('saveDir').textContent = st.settings.saveDir;
 }
 
+/** 加密状态一句话：加密中就带指纹，没加密就说清为什么 */
+function secLabel(sec) {
+  if (!sec || !sec.active) {
+    if (sec && sec.reason === 'off') return t('未加密：本机已关闭');
+    if (sec && sec.reason === 'legacy') return t('未加密：对方未开启加密');
+    if (sec && sec.reason === 'timeout') return t('未加密：对方没有响应加密握手');
+    return t('未加密');
+  }
+  return t('已加密 · 指纹 {fp}', { fp: sec.fingerprint });
+}
+
 function peerRow(peer, extra) {
   const row = el('div', 'peer');
   const viaRelay = peer.via === 'relay';
@@ -227,6 +238,9 @@ function peerRow(peer, extra) {
   row.appendChild(avatar);
   row.appendChild(meta);
   if (viaRelay) row.appendChild(el('span', 'via', t('互联网中继')));
+  const sec = el('span', peer.sec && peer.sec.active ? 'via' : 'via warn', secLabel(peer.sec));
+  sec.title = t('与对方各自核对这 6 位指纹，两边一致才说明中继没有冒充');
+  row.appendChild(sec);
   if (extra) row.appendChild(extra);
   return row;
 }
@@ -343,6 +357,7 @@ function renderJoin(st) {
   if (st.joined) {
     $('joinedRoom').textContent = st.joined.codeDisplay || st.joined.room;
     $('joinedHost').textContent = `${st.joined.name || st.joined.ip || t('互联网中继')}${st.joined.via === 'relay' ? t('（经中继）') : ''}`;
+    $('joinedSec').textContent = secLabel(st.joined.sec);
     const box = $('guestPeers');
     clear(box);
     for (const p of st.peers) box.appendChild(peerRow(p));
@@ -903,6 +918,7 @@ function settingsPatch() {
     autoAccept: $('setAutoAccept').checked,
     autoApprove: $('setAutoApprove').checked,
     allowPublic: $('setAllowPublic').checked,
+    e2ee: $('setE2ee').checked,
     relayEnabled: $('setRelayEnabled').checked,
     relayProvider: provider,
     relayUrl: $('setRelayUrl').value.trim(),
@@ -932,6 +948,7 @@ function syncSettingsInputs(st) {
   $('setAutoAccept').checked = Boolean(st.settings.autoAccept);
   $('setAutoApprove').checked = Boolean(st.settings.autoApprove);
   $('setAllowPublic').checked = Boolean(st.settings.allowPublic);
+  $('setE2ee').checked = st.settings.e2ee !== false;
   if (st.panel && document.activeElement !== $('panelUrlInput')) $('panelUrlInput').value = st.panel.url;
   $('setRelayEnabled').checked = Boolean(st.settings.relayEnabled);
   if (document.activeElement !== $('setRelayUrl')) $('setRelayUrl').value = st.settings.relayUrl || '';

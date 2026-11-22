@@ -105,6 +105,8 @@ class Hub extends EventEmitter {
     this._tunnel = null; // tunnel.startTunnel 返回的句柄
     this._localRelay = null; // 仅绑 127.0.0.1 的本机中继
     this._stoppingTunnel = false;
+    // 端到端加密：默认开启，双方都支持时中继与局域网上的字节都只有密文
+    this.e2eeEnabled = opts.e2ee !== false;
   }
 
   // ------------------------------------------------------------ 事件出口
@@ -132,6 +134,7 @@ class Hub extends EventEmitter {
         relayProvider: this.relayProvider,
         relayUrl: this.relayUrl,
         language: this.language,
+        e2ee: this.e2eeEnabled,
         addresses: lanInterfaces().map((i) => ({ name: i.name, address: i.address })),
       },
       room: this.room ? { ...this.room, codeDisplay: formatRoomCode(this.room.code) } : null,
@@ -144,6 +147,7 @@ class Hub extends EventEmitter {
             name: this._localGuestPeer.peerName,
             ip: this._localGuestPeer.ip,
             via: this._localGuestPeer.via || 'lan',
+            sec: this._secView(this._localGuestPeer),
           }
         : null,
       outgoing: this.outgoing,
@@ -153,6 +157,7 @@ class Hub extends EventEmitter {
         ip: p.ip,
         via: p.via || 'lan',
         since: p._since || Date.now(),
+        sec: this._secView(p),
       })),
       joinRequests: [...this.joinRequests.entries()].map(([deviceId, r]) => ({ deviceId, name: r.name, ip: r.ip })),
       offers: [...this.offers.values()].map((o) => this._offerView(o)),
@@ -161,6 +166,12 @@ class Hub extends EventEmitter {
       visible: this.visible.filter((r) => Date.now() - (r.at || 0) < 90_000), // 旧条目过期，别让「扫描到了」误导成还能加入
       panel: this.panel ? { port: this.panel.port, url: this.panel.url } : null,
     };
+  }
+
+  /** 加密状态摘要：界面只关心「有没有加密 + 6 位指纹 + 没加密的原因」 */
+  _secView(peer) {
+    const e = (peer && peer.e2ee) || {};
+    return { active: Boolean(e.active), fingerprint: String(e.fingerprint || ''), reason: String(e.reason || '') };
   }
 
   /** 面板要展示但引擎内部才知道的常量，集中一处交给 dashboard，避免两边各写一遍数字 */
@@ -734,10 +745,16 @@ class Hub extends EventEmitter {
   // ------------------------------------------------------------ Peer 接线（两种角色共用）
 
   _createPeer(ws, ip, role, via = 'lan') {
-    const peer = new Peer(ws, { role, ip, saveDir: this.saveDir, autoAccept: this.autoAccept });
+    const peer = new Peer(ws, { role, ip, saveDir: this.saveDir, autoAccept: this.autoAccept, e2ee: this.e2eeEnabled });
     peer.via = via;
     peer.setSelf({ deviceId: this.deviceId, name: this.deviceName });
     peer._since = Date.now();
+
+    peer.on('secure', ({ fingerprint }) => {
+      this.notice('与 {name} 的连接已端到端加密，指纹 {fp}', { name: peer.peerName, fp: fingerprint });
+      this._emit({ type: 'secure', deviceId: peer.peerDeviceId, name: peer.peerName, fingerprint });
+      this._pushState();
+    });
 
     peer.on('ready', () => {
       this.peers.set(peer.peerDeviceId || peer.ip, peer);
@@ -1201,6 +1218,8 @@ class Hub extends EventEmitter {
     }
     if (typeof patch.autoApprove === 'boolean') this.autoApprove = patch.autoApprove;
     if (typeof patch.allowPublic === 'boolean') this.allowPublic = patch.allowPublic;
+    // 只影响之后的连接：已建立的会话换密钥要重新握手，代价大于收益
+    if (typeof patch.e2ee === 'boolean') this.e2eeEnabled = patch.e2ee;
     const tunnelOwnedUrl = this.relayProvider === 'ngrok' && Boolean(this._tunnel);
     const relayTouched =
       (typeof patch.relayEnabled === 'boolean' && patch.relayEnabled !== this.relayEnabled) ||

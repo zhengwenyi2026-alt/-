@@ -66,7 +66,7 @@
 | macOS 免挂载 | `SkyDrop-1.0.4-arm64.zip` | 112.9 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
 | Windows 10/11（x64） | `SkyDrop-Setup-1.0.4-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式；安装时请求一次 UAC 并自动添加防火墙放行规则 |
 | Windows ARM64 | `SkyDrop-Setup-1.0.4-arm64.exe` | 110.5 MB | 同上（骁龙等 ARM 笔记本） |
-| Windows 免安装（x64） | `SkyDrop-Portable-1.0.4-x64.exe` | 105.5 MB | 单文件双击直接运行 |
+| Windows 免安装（x64） | `SkyDrop-Portable-1.0.4-x64.exe` | 105.6 MB | 单文件双击直接运行 |
 | Windows 免安装（ARM64） | `SkyDrop-Portable-1.0.4-arm64.exe` | 100.6 MB | 单文件双击直接运行 |
 
 Release 资产用英文名 `SkyDrop-` 开头（非 ASCII 文件名在部分下载工具里会被转义），安装后的应用名仍然是**「隔空传」**。本机 `npm run release` 出来的文件在 `可执行文件/` 下，名字是中文的 `隔空传-…`，内容与 Release 资产逐字节相同（`dist/` 是构建中间目录）。

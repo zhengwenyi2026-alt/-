@@ -27,7 +27,18 @@ const RELAY_HELP = {
   cloudflare: '部署 relay/cloudflare 里的 Worker，再把 xxx.workers.dev 地址粘贴到上面。',
   vercel: '部署 relay/vercel 里的服务，再把 xxx.vercel.app 地址粘贴到上面（Vercel 的 WebSocket 需要在项目里开启 Fluid 计算）。',
   custom: '填自建中继的地址，例如 relay.example.com 或 1.2.3.4:8790（node relay/node-server.js 起的就是这种）。',
+  ngrok: '点「启动隧道」：本机起一个中继并让 ngrok 给它一个公网地址，把地址发给对方，对方粘到「自建 / 其它」的中继地址里即可。',
 };
+
+// ngrok 只有应用内检测到才可选项里出现
+const RELAY_PROVIDERS = ['cloudflare', 'vercel', 'custom', 'ngrok'];
+
+function activeProvider(st) {
+  const tun = (st && st.tunnel) || {};
+  const p = (st && st.relay && st.relay.provider) || 'cloudflare';
+  if (p === 'ngrok' && !tun.installed) return 'cloudflare';
+  return RELAY_PROVIDERS.includes(p) ? p : 'cloudflare';
+}
 
 /** 把 HTML 里带 data-i18n* 的静态文案换成当前语言 */
 function applyStatic() {
@@ -224,6 +235,8 @@ function peerRow(peer, extra) {
 function relayStateText(st) {
   const r = st.relay || {};
   if (!r.enabled) return t('未开启');
+  // ngrok 这一路的「中继地址」就是隧道地址，没启动隧道时无从填写，提示要指着按钮说
+  if (activeProvider(st) === 'ngrok' && (st.tunnel || {}).status !== 'running') return t('先启动隧道');
   if (!String(r.url || '').trim()) return t('请先填写中继地址');
   if (!st.room) return t('已开启 · 创建房间后自动挂上');
   if (r.status === 'error') return t('中继不可用：{msg}', { msg: r.error || t('未知原因') });
@@ -235,15 +248,56 @@ function relayStateText(st) {
 
 function renderRelay(st) {
   const r = st.relay || {};
+  const tun = st.tunnel || {};
   // 没开启时只留一个开关，避免界面里长期挂着一段用不上的配置
   $('relayBody').hidden = !r.enabled;
-  const provider = ['cloudflare', 'vercel', 'custom'].includes(r.provider) ? r.provider : 'cloudflare';
-  $('relayHelp').textContent = t(String(r.url || '').trim() ? RELAY_HELP[provider] : '填好地址后点「测试连接」，通了再创建房间。');
+  const provider = activeProvider(st);
+  const usingNgrok = provider === 'ngrok';
+  // 没检测到 ngrok：下拉里不留这一项，隧道配置块也整个不出现
+  $('ngrokOption').hidden = !tun.installed;
+  $('ngrokBox').hidden = !tun.installed;
+  $('relayUrlField').hidden = usingNgrok;
+  if (tun.installed) renderTunnel(st);
+  const filled = String(r.url || '').trim();
+  $('relayHelp').textContent = t(
+    usingNgrok
+      ? filled
+        ? RELAY_HELP.ngrok
+        : '点「启动隧道」，本机自动起一个中继并拿到公网地址，再把地址发给对方。'
+      : filled
+        ? RELAY_HELP[provider]
+        : '填好地址后点「测试连接」，通了再创建房间。'
+  );
   const state = $('relayState');
   state.textContent = relayStateText(st);
   state.className = r.enabled && r.status === 'ready' ? 'ok' : r.enabled && r.status === 'error' ? 'bad' : '';
-  $('relayTestBtn').disabled = !String($('setRelayUrl').value || '').trim();
-  $('joinRelayBtn').classList.toggle('mutedbtn', !(r.enabled && String(r.url || '').trim()));
+  $('relayTestBtn').disabled = usingNgrok || !String($('setRelayUrl').value || '').trim();
+  $('joinRelayBtn').classList.toggle('mutedbtn', !(r.enabled && Boolean(filled)));
+}
+
+/** 隧道状态一句话说清楚，异常时直接带上 ngrok 给出的原因 */
+function tunnelStateText(st) {
+  const u = st.tunnel || {};
+  if (!u.installed) return t('未检测到 ngrok');
+  if (u.status === 'running') return t('隧道运行中');
+  if (u.status === 'starting') return t('正在启动隧道…');
+  if (u.status === 'error') return t('隧道异常：{msg}', { msg: u.error || t('未知原因') });
+  return t('未启动');
+}
+
+function renderTunnel(st) {
+  const u = st.tunnel || {};
+  const running = u.status === 'running';
+  const starting = u.status === 'starting';
+  $('tunnelStartBtn').hidden = running;
+  $('tunnelStartBtn').disabled = starting;
+  $('tunnelStopBtn').hidden = !running;
+  $('tunnelUrl').textContent = running ? u.url : '—';
+  $('tunnelUrl').className = running ? 'ok' : u.status === 'error' ? 'bad' : '';
+  $('tunnelCopyBtn').hidden = !running;
+  const label = $('tunnelState');
+  label.textContent = tunnelStateText(st);
+  label.className = running ? 'ok' : u.status === 'error' ? 'bad' : '';
 }
 
 function renderHost(st) {
@@ -773,10 +827,29 @@ function bindStatic() {
   });
   for (const id of ['setAutoAccept', 'setAutoApprove', 'setAllowPublic', 'setRelayEnabled', 'setRelayProvider']) {
     $(id).addEventListener('change', async () => {
+      // 选中 ngrok 就是要用互联网通道，顺带把总开关打开，免得界面上还看不见隧道配置
+      if (id === 'setRelayProvider' && $('setRelayProvider').value === 'ngrok') $('setRelayEnabled').checked = true;
       await call(api.setSettings(settingsPatch()));
       await refresh();
     });
   }
+  $('tunnelStartBtn').addEventListener('click', async () => {
+    const btn = $('tunnelStartBtn');
+    btn.disabled = true;
+    await call(api.startTunnel(), true); // 失败提示由 notice 事件统一弹，这里不重复弹窗
+    btn.disabled = false;
+    await refresh();
+  });
+  $('tunnelStopBtn').addEventListener('click', async () => {
+    await call(api.stopTunnel());
+    await refresh();
+  });
+  $('tunnelCopyBtn').addEventListener('click', () => {
+    const url = String((S.state && S.state.tunnel && S.state.tunnel.url) || '');
+    if (!/^https:\/\//.test(url)) return;
+    api.copy(url);
+    toast(t('已复制隧道地址'), 'success');
+  });
   // 地址一边打字一边保存会让房主侧槽位池反复重开，所以只在失焦或回车时提交
   const saveRelayUrl = async () => {
     await call(api.setSettings(settingsPatch()));
@@ -817,16 +890,20 @@ function bindStatic() {
 }
 
 function settingsPatch() {
-  return {
+  const provider = $('setRelayProvider').value;
+  const patch = {
     deviceName: $('setNameInput').value.trim(),
     language: $('setLang').value || LANG,
     autoAccept: $('setAutoAccept').checked,
     autoApprove: $('setAutoApprove').checked,
     allowPublic: $('setAllowPublic').checked,
     relayEnabled: $('setRelayEnabled').checked,
-    relayProvider: $('setRelayProvider').value,
+    relayProvider: provider,
     relayUrl: $('setRelayUrl').value.trim(),
   };
+  // ngrok 的中继地址由隧道自己写入引擎，输入框是空的，不能把空串存回去覆盖掉
+  if (provider === 'ngrok') delete patch.relayUrl;
+  return patch;
 }
 
 async function saveSettings() {
@@ -851,10 +928,7 @@ function syncSettingsInputs(st) {
   if (st.panel && document.activeElement !== $('panelUrlInput')) $('panelUrlInput').value = st.panel.url;
   $('setRelayEnabled').checked = Boolean(st.settings.relayEnabled);
   if (document.activeElement !== $('setRelayUrl')) $('setRelayUrl').value = st.settings.relayUrl || '';
-  if (document.activeElement !== $('setRelayProvider')) {
-    const p = st.settings.relayProvider;
-    $('setRelayProvider').value = ['cloudflare', 'vercel', 'custom'].includes(p) ? p : 'cloudflare';
-  }
+  if (document.activeElement !== $('setRelayProvider')) $('setRelayProvider').value = activeProvider(st);
 }
 
 // ---------------------------------------------------------------- 启动

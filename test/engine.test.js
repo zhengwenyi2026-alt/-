@@ -1075,3 +1075,280 @@ test('跨网中继：两台设备只经中继完成双向传文件', async (t) =
   guest.respondOffer((await offerIn3).offer.id, true);
   await nextEvent(guest, 'offer-done', (e) => e.ok);
 });
+
+// ---------------------------------------------------------------- ngrok 隧道
+
+const tunnel = require('../src/main/engine/tunnel');
+const { probeRelay } = require('../src/main/engine/relay');
+const { EventEmitter } = require('events');
+
+const tunnelLog = (url, addr) => JSON.stringify({ lvl: 'info', msg: 'started tunnel', obj: 'tunnels', addr: `http://localhost:${addr}`, url });
+
+/** 假的 ngrok 子进程：按参数决定吐什么日志、什么时候退出 */
+function fakeNgrok({ stdout = '', stderr = '', exitCode = null } = {}) {
+  const child = new EventEmitter();
+  child.pid = 4242;
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  child.killed = false;
+  child.kill = (sig) => {
+    child.killed = sig || 'TERM';
+    return true;
+  };
+  setImmediate(() => {
+    if (stdout) child.stdout.emit('data', stdout);
+    if (stderr) child.stderr.emit('data', stderr);
+    if (exitCode !== null) child.emit('close', exitCode);
+  });
+  return child;
+}
+
+test('ngrok 检测：装了给出绝对路径与版本，没装回报 installed=false', async () => {
+  const hit = await tunnel.findNgrok({
+    platform: 'darwin',
+    dirs: ['/empty', '/opt/homebrew/bin'],
+    exists: (p) => p === '/opt/homebrew/bin/ngrok' || p === '/empty/ngrok',
+    stat: (p) => ({ isFile: () => p !== '/empty/ngrok' }), // 同名目录不是文件，要跳过继续找
+    runVersion: async () => 'ngrok version 3.37.2\n',
+  });
+  assert.deepEqual(hit, { installed: true, path: '/opt/homebrew/bin/ngrok', version: '3.37.2' });
+
+  assert.deepEqual(await tunnel.findNgrok({ platform: 'darwin', dirs: ['/nope'], exists: () => false }), {
+    installed: false,
+    path: '',
+    version: '',
+  });
+
+  // 二进制在但跑不出版本号：仍然算装了，界面该给入口，具体原因留给启动时报
+  const odd = await tunnel.findNgrok({
+    platform: 'win32',
+    dirs: ['C:\\ngrok'],
+    exists: () => true,
+    stat: () => ({ isFile: () => true }),
+    runVersion: async () => '',
+  });
+  assert.equal(odd.installed, true);
+  assert.equal(odd.path, 'C:\\ngrok\\ngrok.exe');
+  assert.equal(odd.version, '');
+});
+
+test('ngrok 检测：PATH 之外的常见安装目录按平台覆盖，用户自己的 PATH 优先', () => {
+  assert.deepEqual(tunnel.standardDirs('darwin', {}, '/Users/x').slice(0, 3), ['/opt/homebrew/bin', '/usr/local/bin', '/opt/local/bin']);
+  const win = tunnel.standardDirs('win32', { LOCALAPPDATA: 'C:\\Users\\x\\AppData\\Local', ProgramFiles: 'C:\\Program Files' }, 'C:\\Users\\x');
+  assert.ok(win.includes('C:\\Users\\x\\AppData\\Local\\ngrok'), 'winget/手工安装的位置');
+  assert.ok(win.includes('C:\\Program Files\\ngrok'));
+  assert.ok(win.includes('C:\\ProgramData\\chocolatey\\bin'));
+  assert.ok(tunnel.standardDirs('linux', {}, '/home/x').includes('/snap/bin'));
+  const dirs = tunnel.dirCandidates({ platform: 'darwin', env: { PATH: '/mine/bin:/usr/bin' }, homedir: '/Users/x' });
+  assert.ok(dirs.indexOf('/mine/bin') >= 0 && dirs.indexOf('/mine/bin') < dirs.indexOf('/opt/homebrew/bin'));
+});
+
+test('ngrok 输出解析：只采信指向本机端口的 https 隧道', () => {
+  const payload = {
+    tunnels: [
+      { public_url: 'http://a.ngrok-free.app', config: { addr: 'http://localhost:8791' } },
+      { public_url: 'https://a.ngrok-free.app', config: { addr: 'http://localhost:9999' } },
+      { public_url: 'https://b.ngrok-free.app', config: { addr: 'http://localhost:8791' } },
+    ],
+  };
+  assert.equal(tunnel.pickPublicUrl(payload, 8791), 'https://b.ngrok-free.app', '明文隧道与别的端口的隧道都不能用');
+  assert.equal(tunnel.pickPublicUrl(payload, 1234), '');
+  assert.equal(tunnel.pickPublicUrl({}, 8791), '');
+  assert.equal(tunnel.urlFromLogLine(tunnelLog('https://c.ngrok.app', 8791)), 'https://c.ngrok.app');
+  assert.equal(tunnel.urlFromLogLine('lvl=info msg="started tunnel" url=https://d.ngrok.app addr=localhost:8791'), 'https://d.ngrok.app');
+  assert.equal(tunnel.urlFromLogLine(JSON.stringify({ lvl: 'info', msg: 'client session established' })), '');
+  assert.equal(tunnel.webPortFromLogLine(JSON.stringify({ msg: 'starting web service', addr: '127.0.0.1:4041' })), '4041');
+  assert.equal(tunnel.webPortFromLogLine(tunnelLog('https://c.ngrok.app', 8791)), '');
+});
+
+test('隧道生命周期：从自家子进程的日志拿到公网地址，停止时杀掉进程', async () => {
+  let spawned = null;
+  const child = fakeNgrok({ stdout: tunnelLog('https://e11.ngrok-free.app', 8791) + '\n' });
+  const handle = await tunnel.startTunnel({
+    targetPort: 8791,
+    ngrokPath: '/opt/homebrew/bin/ngrok',
+    pollMs: 10,
+    spawnImpl: (bin, args) => {
+      spawned = { bin, args };
+      return child;
+    },
+    getJsonImpl: async () => {
+      throw new Error('日志里就有地址，不该去查检查接口');
+    },
+  });
+  assert.equal(handle.url, 'https://e11.ngrok-free.app');
+  assert.equal(handle.host, 'e11.ngrok-free.app');
+  assert.equal(spawned.bin, '/opt/homebrew/bin/ngrok');
+  assert.deepEqual(spawned.args, ['http', '8791', '--log=stdout', '--log-format=json'], 'ngrok 3.x 的 http 子命令只认这几个参数');
+  handle.stop();
+  assert.equal(child.killed, 'SIGTERM');
+});
+
+test('隧道报错：ngrok 的英文报错要翻成能照做的下一步', async () => {
+  const noToken = fakeNgrok({ stderr: 'You must sign up for an ngrok account and use your authtoken.\n', exitCode: 1 });
+  await assert.rejects(
+    () => tunnel.startTunnel({ targetPort: 8791, pollMs: 10, spawnImpl: () => noToken, getJsonImpl: async () => ({}) }),
+    /ngrok config add-authtoken/
+  );
+
+  const busy = fakeNgrok({ stderr: 'Your account is limited to 1 simultaneous ngrok agent sessions\n', exitCode: 1 });
+  await assert.rejects(
+    () => tunnel.startTunnel({ targetPort: 8791, pollMs: 10, spawnImpl: () => busy, getJsonImpl: async () => ({}) }),
+    /同时只能开一条隧道/
+  );
+
+  // 超时：什么都没吐也不能挂着进程不管
+  const quiet = fakeNgrok();
+  await assert.rejects(
+    () => tunnel.startTunnel({ targetPort: 8791, pollMs: 10, waitFor: 60, spawnImpl: () => quiet, getJsonImpl: async () => ({}) }),
+    /等待 ngrok 分配公网地址超时/
+  );
+  assert.equal(quiet.killed, 'SIGTERM', '超时要把半死的 ngrok 收掉');
+
+  // 已经交付给调用方之后再退出：回调报出来，界面不能继续显示「运行中」
+  let exitReason = '';
+  const later = fakeNgrok({ stdout: tunnelLog('https://e12.ngrok.app', 8791) + '\n' });
+  const handle = await tunnel.startTunnel({
+    targetPort: 8791,
+    pollMs: 10,
+    spawnImpl: () => later,
+    getJsonImpl: async () => ({}),
+    onExit: (r) => {
+      exitReason = r;
+    },
+  });
+  assert.equal(handle.url, 'https://e12.ngrok.app');
+  later.stderr.emit('data', 'invalid request ERR_NGROK_3104\n');
+  later.emit('close', 1);
+  assert.match(exitReason, /ERR_NGROK_3104/);
+});
+
+test('hub：没装 ngrok 时状态里 installed=false，启动隧道直接报错', async () => {
+  const hub = new Hub({ deviceName: '无隧道', saveDir: tmpDir('tunnel-none'), udpPort: 47817 });
+  assert.equal(hub.state().tunnel.installed, false);
+  assert.equal(hub.state().tunnel.status, 'off');
+  await assert.rejects(() => hub.startTunnel(), /没有检测到 ngrok/);
+  hub.dispose();
+});
+
+test('hub：本机中继真的起得来，并能被当中继地址拨通（隧道要暴露的就是它）', async () => {
+  const hub = new Hub({ deviceName: '本机中继', saveDir: tmpDir('local-relay'), udpPort: 47819 });
+  const relay = await hub._ensureLocalRelay();
+  assert.ok(relay.port > 0, '本机中继要绑到回环的随机端口');
+  assert.equal(hub._localRelay, relay, '重复调用要复用同一个本机中继');
+  const probe = await probeRelay({ input: `127.0.0.1:${relay.port}`, provider: 'ngrok', code: generateRoomCode() });
+  assert.equal(probe.host, `127.0.0.1:${relay.port}`);
+  assert.equal(probe.secure, false, '本机这段是明文回环，TLS 由 ngrok 的公网地址负责');
+  await hub._stopLocalRelay();
+  assert.equal(hub._localRelay, null);
+  hub.dispose();
+});
+
+test('hub：隧道起来就当中继地址用，停掉或切走服务商都收干净', async () => {
+  const hub = new Hub({ deviceName: '隧道房主', saveDir: tmpDir('tunnel-hub'), udpPort: 47818, relayEnabled: true, relayProvider: 'ngrok' });
+  hub.setNgrok({ installed: true, path: '/opt/homebrew/bin/ngrok', version: '3.37.2' });
+  assert.equal(hub.state().tunnel.installed, true);
+  let killed = false;
+  let relayClosed = false;
+  let opened = 0;
+  hub._openRelay = () => {
+    opened += 1;
+  };
+  hub._ensureLocalRelay = async () => ({ port: 8791, close: async () => { relayClosed = true; } });
+  hub._spawnTunnel = async ({ targetPort, ngrokPath }) => {
+    assert.equal(targetPort, 8791, '隧道要指向本机中继的端口');
+    assert.equal(ngrokPath, '/opt/homebrew/bin/ngrok');
+    return { url: 'https://t9.ngrok-free.app', host: 't9.ngrok-free.app', pid: 7, stop: () => { killed = true; } };
+  };
+  // 房间先开着：隧道就绪后要立刻把槽位挂上去，而不是等用户重建房间
+  const room = await hub.startRoom();
+  assert.ok(room.code);
+  const res = await hub.startTunnel();
+  assert.equal(res.url, 'https://t9.ngrok-free.app');
+  assert.equal(hub.state().tunnel.status, 'running');
+  assert.equal(hub.state().relay.url, 'https://t9.ngrok-free.app');
+  assert.equal(hub.state().relay.provider, 'ngrok');
+  assert.equal(hub.state().relay.enabled, true);
+  assert.ok(opened >= 1, '隧道就绪后要把房主侧槽位挂上中继');
+  // 重复点「启动隧道」不应该再起一条 ngrok
+  const again = await hub.startTunnel();
+  assert.equal(again.url, 'https://t9.ngrok-free.app');
+
+  await hub.stopTunnel();
+  assert.equal(hub.state().tunnel.status, 'off');
+  assert.equal(hub.state().relay.url, '', '隧道地址不能留在设置里当下次的中继地址');
+  assert.equal(killed, true);
+  assert.equal(relayClosed, true);
+
+  // 切到别的服务商时，隧道进程不能继续在后台空跑
+  await hub.startTunnel();
+  assert.equal(hub.state().tunnel.status, 'running');
+  hub.setSettings({ relayProvider: 'custom', relayUrl: '' });
+  await settled(() => hub.state().tunnel.status === 'off', 5_000, '切走服务商后隧道没收掉');
+  assert.equal(hub.state().relay.url, '');
+  hub.dispose();
+});
+
+test('hub：ngrok 自己退了要如实报状态，不能停在「运行中」', async () => {
+  const hub = new Hub({ deviceName: '掉线房主', saveDir: tmpDir('tunnel-die'), udpPort: 47820, relayEnabled: true });
+  hub.setNgrok({ installed: true, path: '/opt/homebrew/bin/ngrok', version: '3.37.2' });
+  hub._openRelay = () => {};
+  let relayClosed = false;
+  hub._ensureLocalRelay = async () => ({ port: 8792, close: async () => { relayClosed = true; } });
+  let exitCb = null;
+  hub._spawnTunnel = async ({ onExit }) => {
+    exitCb = onExit;
+    return { url: 'https://t8.ngrok-free.app', host: 't8.ngrok-free.app', pid: 9, stop: () => {} };
+  };
+  await hub.startTunnel();
+  assert.equal(hub.state().tunnel.status, 'running');
+  const events = [];
+  hub.on('event', (e) => events.push(e));
+  exitCb('ngrok 退出（code=1）');
+  assert.equal(hub.state().tunnel.status, 'error');
+  assert.match(hub.state().tunnel.error, /ngrok 退出/);
+  assert.ok(events.some((e) => e.type === 'notice' && /隧道已断开/.test(e.msg)), '断开要提示给用户');
+  assert.equal(hub._tunnel, null);
+  hub.dispose();
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(relayClosed, true, '本机中继跟着隧道一起收掉');
+});
+
+// 界面层的门禁：没装 ngrok 就不能出现任何 ngrok 入口，这里扫源码守住几个容易改漏的点
+test('界面门禁：未检测到 ngrok 时不出现任何 ngrok 入口', () => {
+  const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+  const html = read('src/renderer/index.html');
+  const app = read('src/renderer/app.js');
+
+  // 首屏自带 hidden：主进程的状态推过来之前那一瞬间也不能闪出来
+  const opt = html.match(/<option[^>]*id="ngrokOption"[^>]*>/);
+  const box = html.match(/<div[^>]*id="ngrokBox"[^>]*>/);
+  assert.ok(opt && /\shidden(\s|>)/.test(opt[0]), 'ngrok 下拉项要默认 hidden');
+  assert.ok(box && /\shidden(\s|>)/.test(box[0]), '隧道配置块要默认 hidden');
+
+  // 可见性只认 installed，换成别的字段就等于把门禁拆了
+  assert.match(app, /\$\('ngrokOption'\)\.hidden = !tun\.installed;/);
+  assert.match(app, /\$\('ngrokBox'\)\.hidden = !tun\.installed;/);
+  // 装过 ngrok、存过 provider=ngrok，之后卸掉了：要退回 cloudflare，不能留个选不中的选项
+  assert.match(app, /if \(p === 'ngrok' && !tun\.installed\) return 'cloudflare';/);
+  // ngrok 的中继地址由隧道自己写进引擎，输入框隐藏时不能把空串存回去覆盖掉
+  assert.match(app, /if \(provider === 'ngrok'\) delete patch\.relayUrl;/);
+});
+
+test('IPC 契约：隧道的入口在主进程、preload、界面三处名字对得上', () => {
+  const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+  const main = read('src/main/index.js');
+  const preload = read('src/preload/index.js');
+  const app = read('src/renderer/app.js');
+  for (const [channel, method] of [
+    ['skydrop:tunnel-start', 'startTunnel'],
+    ['skydrop:tunnel-stop', 'stopTunnel'],
+    ['skydrop:tunnel-detect', 'detectNgrok'],
+  ]) {
+    assert.ok(main.includes(`'${channel}'`), `主进程少了 ${channel}`);
+    assert.ok(preload.includes(`ipcRenderer.invoke('${channel}')`), `preload 少了 ${method}`);
+  }
+  for (const method of ['startTunnel', 'stopTunnel']) {
+    assert.match(app, new RegExp(`api\\.${method}\\(`), `界面没调用 ${method}`);
+  }
+});

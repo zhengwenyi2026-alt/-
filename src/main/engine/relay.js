@@ -27,8 +27,9 @@ function keepAlive(ws) {
   return stop;
 }
 
-const PROVIDER_PATH = { cloudflare: '', vercel: '/api', custom: '' };
-const RELAY_PROVIDERS = ['cloudflare', 'vercel', 'custom'];
+// ngrok 走的是本机自建中继（同一套路由），provider 只影响缺省前缀与提示文案
+const PROVIDER_PATH = { cloudflare: '', vercel: '/api', custom: '', ngrok: '' };
+const RELAY_PROVIDERS = ['cloudflare', 'vercel', 'custom', 'ngrok'];
 
 // 中继回的错误码 → 中文原文（渲染层再查词典）
 const RELAY_ERRORS = {

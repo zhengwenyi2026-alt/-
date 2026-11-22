@@ -202,6 +202,50 @@ const EN = {
   '跨网传输': 'Internet relay',
   '不同 Wi-Fi / 蜂窝网络时，用你自己部署的中继穿透': 'Use a relay you deploy yourself when you are not on the same Wi-Fi',
   '允许通过互联网连接（需要下面填一个中继地址）': 'Allow connections over the Internet (needs a relay address below)',
+  // ---- ngrok 隧道（本机起中继 + 公网地址）
+  'ngrok · 本机隧道': 'ngrok · tunnel from this device',
+  '启动隧道': 'Start tunnel',
+  '停止隧道': 'Stop tunnel',
+  '隧道地址': 'Tunnel address',
+  '隧道状态': 'Tunnel status',
+  '隧道运行中': 'Tunnel running',
+  '正在启动隧道…': 'Starting the tunnel…',
+  '未启动': 'Not started',
+  '先启动隧道': 'Start the tunnel first',
+  '未检测到 ngrok': 'ngrok not detected',
+  '隧道异常：{msg}': 'Tunnel error: {msg}',
+  '已复制隧道地址': 'Tunnel address copied',
+  '点「启动隧道」：本机起一个中继并让 ngrok 给它一个公网地址，把地址发给对方，对方粘到「自建 / 其它」的中继地址里即可。':
+    'Press “Start tunnel”: this device runs the relay and ngrok gives it a public address. Send that address to your partner, who pastes it as a “Self-hosted / other” relay address.',
+  '点「启动隧道」，本机自动起一个中继并拿到公网地址，再把地址发给对方。':
+    'Press “Start tunnel” to launch a local relay and get a public address, then send that address to your partner.',
+  '隧道已就绪，把这个地址发给对方：{url}': 'Tunnel ready — send this address to your partner: {url}',
+  '隧道启动失败：{msg}': 'Tunnel failed to start: {msg}',
+  '隧道正在启动中，请稍候': 'The tunnel is already starting, one moment',
+  '隧道连接已断开': 'The tunnel connection closed',
+  '隧道已断开：{msg}': 'Tunnel closed: {msg}',
+  'ngrok 进程退出了': 'the ngrok process exited',
+  '这台电脑上没有检测到 ngrok，请安装后重启隔空传': 'ngrok was not found on this computer — install it, then restart SkyDrop',
+  '应用正在退出': 'The app is quitting',
+  'ngrok 还没有配置 authtoken，请在终端执行：ngrok config add-authtoken <你的令牌>（令牌见 https://dashboard.ngrok.com/get-started/authtoken），配好后回到这里点「启动隧道」':
+    'ngrok has no authtoken yet — run `ngrok config add-authtoken <your token>` in a terminal (token at https://dashboard.ngrok.com/get-started/authtoken), then press “Start tunnel” here',
+  'ngrok 免费账号同时只能开一条隧道，请先停掉其它设备上的隧道（或升级套餐）再试':
+    'A free ngrok account allows one tunnel at a time — stop the tunnel on other devices (or upgrade) and try again',
+  '本机隧道检查端口被占用了，请先关掉其它正在运行的 ngrok 再试':
+    "This device's tunnel inspector port is busy — quit the other running ngrok first",
+  '这台机器上的 ngrok 版本太旧，请升级到 3.x（macOS：brew upgrade ngrok／Windows：winget upgrade ngrok）':
+    'This ngrok is too old — upgrade to 3.x (macOS: brew upgrade ngrok / Windows: winget upgrade ngrok)',
+  'ngrok 连接失败：本机证书校验没通过，请检查代理或安全软件':
+    'ngrok could not connect: certificate verification failed — check your proxy or security software',
+  '连不上 ngrok 服务：请确认这台机器能访问外网': 'Cannot reach ngrok — make sure this computer has internet access',
+  '连不上 ngrok 服务：请检查网络或代理后重试': 'Cannot reach ngrok — check your network or proxy and try again',
+  'ngrok 启动失败，请在终端手动运行 ngrok 查看具体原因': 'ngrok failed to start — run ngrok in a terminal to see why',
+  '隧道接口返回了无法解析的内容': 'The tunnel inspector returned an unreadable response',
+  '隧道接口无响应': 'The tunnel inspector is not responding',
+  '中继端口不正确': 'The relay port is not valid',
+  'ngrok 启动失败：这台机器上的 ngrok 无法运行': 'ngrok failed to start — this ngrok cannot be run',
+  '等待 ngrok 分配公网地址超时，请确认这台机器能访问外网':
+    'Timed out waiting for ngrok to assign a public address — make sure this computer has internet access',
   '中继服务商': 'Relay provider',
   '自建 / 其它': 'Self-hosted / other',
   '中继地址': 'Relay address',
@@ -589,6 +633,50 @@ const JA = {
   '跨网传输': 'インターネット中継',
   '不同 Wi-Fi / 蜂窝网络时，用你自己部署的中继穿透': '別の Wi-Fi / モバイル回線では、自分でデプロイした中継サーバーを利用します',
   '允许通过互联网连接（需要下面填一个中继地址）': 'インターネット経由の接続を許可（下に中継アドレスを入力）',
+  // ---- ngrok トンネル（この端末で中継を起動＋公開アドレス）
+  'ngrok · 本机隧道': 'ngrok · この端末のトンネル',
+  '启动隧道': 'トンネルを開始',
+  '停止隧道': 'トンネルを停止',
+  '隧道地址': 'トンネルアドレス',
+  '隧道状态': 'トンネル状態',
+  '隧道运行中': 'トンネル稼働中',
+  '正在启动隧道…': 'トンネルを起動しています…',
+  '未启动': '未起動',
+  '先启动隧道': '先にトンネルを開始してください',
+  '未检测到 ngrok': 'ngrok が見つかりません',
+  '隧道异常：{msg}': 'トンネルのエラー：{msg}',
+  '已复制隧道地址': 'トンネルアドレスをコピーしました',
+  '点「启动隧道」：本机起一个中继并让 ngrok 给它一个公网地址，把地址发给对方，对方粘到「自建 / 其它」的中继地址里即可。':
+    '「トンネルを開始」を押すとこの端末が中継を起動し、ngrok が公開アドレスを取得します。そのアドレスを相手に送り、相手は「自己構築 / その他」の中継アドレスに貼り付けてください。',
+  '点「启动隧道」，本机自动起一个中继并拿到公网地址，再把地址发给对方。':
+    '「トンネルを開始」を押すと、この端末が中継を起動して公開アドレスを取得します。取得したら相手に送ってください。',
+  '隧道已就绪，把这个地址发给对方：{url}': 'トンネルの準備ができました。このアドレスを相手に送ってください：{url}',
+  '隧道启动失败：{msg}': 'トンネルの起動に失敗しました：{msg}',
+  '隧道正在启动中，请稍候': 'トンネルを起動中です。しばらくお待ちください',
+  '隧道连接已断开': 'トンネルの接続が切れました',
+  '隧道已断开：{msg}': 'トンネルが切れました：{msg}',
+  'ngrok 进程退出了': 'ngrok プロセスが終了しました',
+  '这台电脑上没有检测到 ngrok，请安装后重启隔空传': 'このコンピューターで ngrok が見つかりませんでした。インストール後に SkyDrop を再起動してください',
+  '应用正在退出': 'アプリを終了しています',
+  'ngrok 还没有配置 authtoken，请在终端执行：ngrok config add-authtoken <你的令牌>（令牌见 https://dashboard.ngrok.com/get-started/authtoken），配好后回到这里点「启动隧道」':
+    'ngrok に authtoken が設定されていません。ターミナルで `ngrok config add-authtoken <トークン>` を実行し（トークンは https://dashboard.ngrok.com/get-started/authtoken）、設定後にここで「トンネルを開始」を押してください',
+  'ngrok 免费账号同时只能开一条隧道，请先停掉其它设备上的隧道（或升级套餐）再试':
+    'ngrok の無料アカウントは同時に 1 本だけトンネルを開けます。他の端末のトンネルを止めるか、プランをアップグレードしてから再試行してください',
+  '本机隧道检查端口被占用了，请先关掉其它正在运行的 ngrok 再试':
+    'トンネルの確認用ポートが使用中です。他の ngrok を終了してから再試行してください',
+  '这台机器上的 ngrok 版本太旧，请升级到 3.x（macOS：brew upgrade ngrok／Windows：winget upgrade ngrok）':
+    'このコンピューターの ngrok が古すぎます。3.x にアップグレードしてください（macOS: brew upgrade ngrok / Windows: winget upgrade ngrok）',
+  'ngrok 连接失败：本机证书校验没通过，请检查代理或安全软件':
+    'ngrok に接続できません。証明書の検証に失敗しました。プロキシやセキュリティソフトを確認してください',
+  '连不上 ngrok 服务：请确认这台机器能访问外网': 'ngrok サービスに接続できません。このコンピューターがインターネットに接続できるか確認してください',
+  '连不上 ngrok 服务：请检查网络或代理后重试': 'ngrok サービスに接続できません。ネットワークまたはプロキシを確認して再試行してください',
+  'ngrok 启动失败，请在终端手动运行 ngrok 查看具体原因': 'ngrok を起動できません。ターミナルで手動で ngrok を実行して理由を確認してください',
+  '隧道接口返回了无法解析的内容': 'トンネルの確認用 API が読み取れない内容を返しました',
+  '隧道接口无响应': 'トンネルの確認用 API が応答しません',
+  '中继端口不正确': '中継のポートが正しくありません',
+  'ngrok 启动失败：这台机器上的 ngrok 无法运行': 'ngrok を起動できません。このコンピューターの ngrok を実行できません',
+  '等待 ngrok 分配公网地址超时，请确认这台机器能访问外网':
+    'ngrok からの公開アドレス割り当てを待機中にタイムアウトしました。インターネット接続を確認してください',
   '中继服务商': '中継プロバイダー',
   '自建 / 其它': '自己構築 / その他',
   '中继地址': '中継アドレス',
@@ -976,6 +1064,50 @@ const KO = {
   '跨网传输': '인터넷 중계',
   '不同 Wi-Fi / 蜂窝网络时，用你自己部署的中继穿透': '다른 Wi-Fi / 모바일 네트워크에서는 직접 배포한 중계 서버를 사용하세요',
   '允许通过互联网连接（需要下面填一个中继地址）': '인터넷 경유 연결 허용 (아래에 중계 주소 입력)',
+  // ---- ngrok 터널 (이 기기에서 중계 실행 + 공개 주소)
+  'ngrok · 本机隧道': 'ngrok · 이 기기 터널',
+  '启动隧道': '터널 시작',
+  '停止隧道': '터널 중지',
+  '隧道地址': '터널 주소',
+  '隧道状态': '터널 상태',
+  '隧道运行中': '터널 실행 중',
+  '正在启动隧道…': '터널을 시작하는 중…',
+  '未启动': '시작되지 않음',
+  '先启动隧道': '터널을 먼저 시작하세요',
+  '未检测到 ngrok': 'ngrok이 감지되지 않음',
+  '隧道异常：{msg}': '터널 오류: {msg}',
+  '已复制隧道地址': '터널 주소를 복사했습니다',
+  '点「启动隧道」：本机起一个中继并让 ngrok 给它一个公网地址，把地址发给对方，对方粘到「自建 / 其它」的中继地址里即可。':
+    '“터널 시작”을 누르면 이 기기가 중계를 실행하고 ngrok이 공개 주소를 받습니다. 그 주소를 상대방에게 보내면, 상대방은 “자체 구축 / 기타”의 중계 주소에 붙여넣으면 됩니다.',
+  '点「启动隧道」，本机自动起一个中继并拿到公网地址，再把地址发给对方。':
+    '“터널 시작”을 누르면 이 기기가 중계를 실행해 공개 주소를 받습니다. 그 주소를 상대방에게 보내세요.',
+  '隧道已就绪，把这个地址发给对方：{url}': '터널이 준비되었습니다. 이 주소를 상대방에게 보내세요: {url}',
+  '隧道启动失败：{msg}': '터널 시작 실패: {msg}',
+  '隧道正在启动中，请稍候': '터널을 시작하는 중입니다. 잠시 기다려 주세요',
+  '隧道连接已断开': '터널 연결이 끊어졌습니다',
+  '隧道已断开：{msg}': '터널이 끊어졌습니다: {msg}',
+  'ngrok 进程退出了': 'ngrok 프로세스가 종료되었습니다',
+  '这台电脑上没有检测到 ngrok，请安装后重启隔空传': '이 컴퓨터에서 ngrok을 찾을 수 없습니다. 설치 후 SkyDrop을 다시 시작하세요',
+  '应用正在退出': '앱이 종료되고 있습니다',
+  'ngrok 还没有配置 authtoken，请在终端执行：ngrok config add-authtoken <你的令牌>（令牌见 https://dashboard.ngrok.com/get-started/authtoken），配好后回到这里点「启动隧道」':
+    'ngrok에 authtoken이 설정되지 않았습니다. 터미널에서 `ngrok config add-authtoken <토큰>`을 실행하고(토큰: https://dashboard.ngrok.com/get-started/authtoken), 설정 후 여기서 “터널 시작”을 누르세요',
+  'ngrok 免费账号同时只能开一条隧道，请先停掉其它设备上的隧道（或升级套餐）再试':
+    'ngrok 무료 계정은 동시에 터널 1개만 열 수 있습니다. 다른 기기의 터널을 중지하거나 요금제를 업그레이드한 뒤 다시 시도하세요',
+  '本机隧道检查端口被占用了，请先关掉其它正在运行的 ngrok 再试':
+    '터널 검사 포트가 사용 중입니다. 실행 중인 다른 ngrok을 종료한 뒤 다시 시도하세요',
+  '这台机器上的 ngrok 版本太旧，请升级到 3.x（macOS：brew upgrade ngrok／Windows：winget upgrade ngrok）':
+    '이 컴퓨터의 ngrok 버전이 너무 오래되었습니다. 3.x로 업그레이드하세요(macOS: brew upgrade ngrok / Windows: winget upgrade ngrok)',
+  'ngrok 连接失败：本机证书校验没通过，请检查代理或安全软件':
+    'ngrok에 연결할 수 없습니다. 인증서 확인에 실패했습니다. 프록시 또는 보안 소프트웨어를 확인하세요',
+  '连不上 ngrok 服务：请确认这台机器能访问外网': 'ngrok 서비스에 연결할 수 없습니다. 이 컴퓨터가 인터넷에 연결되는지 확인하세요',
+  '连不上 ngrok 服务：请检查网络或代理后重试': 'ngrok 서비스에 연결할 수 없습니다. 네트워크 또는 프록시를 확인한 뒤 다시 시도하세요',
+  'ngrok 启动失败，请在终端手动运行 ngrok 查看具体原因': 'ngrok을 시작할 수 없습니다. 터미널에서 ngrok을 직접 실행해 원인을 확인하세요',
+  '隧道接口返回了无法解析的内容': '터널 검사 API가 해석할 수 없는 내용을 반환했습니다',
+  '隧道接口无响应': '터널 검사 API가 응답하지 않습니다',
+  '中继端口不正确': '중계 포트가 올바르지 않습니다',
+  'ngrok 启动失败：这台机器上的 ngrok 无法运行': 'ngrok을 시작할 수 없습니다. 이 컴퓨터의 ngrok이 실행되지 않습니다',
+  '等待 ngrok 分配公网地址超时，请确认这台机器能访问外网':
+    'ngrok이 공개 주소를 배정하길 기다리다 시간 초과되었습니다. 인터넷 연결을 확인하세요',
   '中继服务商': '중계 제공업체',
   '自建 / 其它': '자체 구축 / 기타',
   '中继地址': '중계 주소',
@@ -1364,6 +1496,50 @@ const TW = {
   '跨网传输': '跨網傳輸',
   '不同 Wi-Fi / 蜂窝网络时，用你自己部署的中继穿透': '不同 Wi-Fi / 行動網路時，使用你自己部署的中繼穿透',
   '允许通过互联网连接（需要下面填一个中继地址）': '允許透過網際網路連線（需要在下方填寫中繼位址）',
+  // ---- ngrok 隧道（本機起中繼 + 公網位址）
+  'ngrok · 本机隧道': 'ngrok · 本機隧道',
+  '启动隧道': '啟動隧道',
+  '停止隧道': '停止隧道',
+  '隧道地址': '隧道位址',
+  '隧道状态': '隧道狀態',
+  '隧道运行中': '隧道運行中',
+  '正在启动隧道…': '正在啟動隧道…',
+  '未启动': '未啟動',
+  '先启动隧道': '先啟動隧道',
+  '未检测到 ngrok': '未偵測到 ngrok',
+  '隧道异常：{msg}': '隧道異常：{msg}',
+  '已复制隧道地址': '已複製隧道位址',
+  '点「启动隧道」：本机起一个中继并让 ngrok 给它一个公网地址，把地址发给对方，对方粘到「自建 / 其它」的中继地址里即可。':
+    '點「啟動隧道」：本機會起一個中繼並讓 ngrok 給它一個公網位址，把位址傳給對方，對方貼到「自建 / 其它」的中繼位址即可。',
+  '点「启动隧道」，本机自动起一个中继并拿到公网地址，再把地址发给对方。':
+    '點「啟動隧道」，本機自動起一個中繼並取得公網位址，再把位址傳給對方。',
+  '隧道已就绪，把这个地址发给对方：{url}': '隧道已就緒，把這個位址傳給對方：{url}',
+  '隧道启动失败：{msg}': '隧道啟動失敗：{msg}',
+  '隧道正在启动中，请稍候': '隧道正在啟動中，請稍候',
+  '隧道连接已断开': '隧道連線已中斷',
+  '隧道已断开：{msg}': '隧道已中斷：{msg}',
+  'ngrok 进程退出了': 'ngrok 程序結束了',
+  '这台电脑上没有检测到 ngrok，请安装后重启隔空传': '這個電腦上沒有偵測到 ngrok，請安裝後重新啟動隔空傳',
+  '应用正在退出': '應用程式正在結束',
+  'ngrok 还没有配置 authtoken，请在终端执行：ngrok config add-authtoken <你的令牌>（令牌见 https://dashboard.ngrok.com/get-started/authtoken），配好后回到这里点「启动隧道」':
+    'ngrok 還沒有配置 authtoken，請在終端執行：ngrok config add-authtoken <你的權杖>（權杖見 https://dashboard.ngrok.com/get-started/authtoken），配好後回到這裡點「啟動隧道」',
+  'ngrok 免费账号同时只能开一条隧道，请先停掉其它设备上的隧道（或升级套餐）再试':
+    'ngrok 免費帳號同時只能開一條隧道，請先停掉其它裝置上的隧道（或升級方案）再試',
+  '本机隧道检查端口被占用了，请先关掉其它正在运行的 ngrok 再试':
+    '本機隧道檢查連接埠被佔用了，請先關掉其它正在執行的 ngrok 再試',
+  '这台机器上的 ngrok 版本太旧，请升级到 3.x（macOS：brew upgrade ngrok／Windows：winget upgrade ngrok）':
+    '這個電腦上的 ngrok 版本太舊，請升級到 3.x（macOS：brew upgrade ngrok／Windows：winget upgrade ngrok）',
+  'ngrok 连接失败：本机证书校验没通过，请检查代理或安全软件':
+    'ngrok 連線失敗：本機憑證校驗沒通過，請檢查代理或安全軟體',
+  '连不上 ngrok 服务：请确认这台机器能访问外网': '連不上 ngrok 服務：請確認這個電腦能存取外網',
+  '连不上 ngrok 服务：请检查网络或代理后重试': '連不上 ngrok 服務：請檢查網路或代理後重試',
+  'ngrok 启动失败，请在终端手动运行 ngrok 查看具体原因': 'ngrok 啟動失敗，請在終端手動執行 ngrok 查看原因',
+  '隧道接口返回了无法解析的内容': '隧道介面回傳了無法解析的內容',
+  '隧道接口无响应': '隧道介面無回應',
+  '中继端口不正确': '中繼連接埠不正確',
+  'ngrok 启动失败：这台机器上的 ngrok 无法运行': 'ngrok 啟動失敗：這個電腦上的 ngrok 無法執行',
+  '等待 ngrok 分配公网地址超时，请确认这台机器能访问外网':
+    '等待 ngrok 分配公網位址逾時，請確認這個電腦能存取外網',
   '中继服务商': '中繼服務商',
   '自建 / 其它': '自建 / 其它',
   '中继地址': '中繼位址',

@@ -112,15 +112,29 @@
                 <option value="cloudflare">Cloudflare</option>
                 <option value="vercel">Vercel</option>
                 <option value="custom" data-i18n="自建 / 其它">自建 / 其它</option>
+                <!-- 只在应用内检测到 ngrok 时才出现，未安装时这行选项保持隐藏 -->
+                <option value="ngrok" id="ngrokOption" hidden data-i18n="ngrok · 本机隧道">ngrok · 本机隧道</option>
               </select>
             </label>
-            <label class="field">
+            <label class="field" id="relayUrlField">
               <span data-i18n="中继地址">中继地址</span>
               <div class="row">
                 <input id="setRelayUrl" autocomplete="off" spellcheck="false" placeholder="skydrop-relay.your-name.workers.dev" data-i18n-aria="中继地址" aria-label="中继地址" />
                 <button class="ghost small" id="relayTestBtn" data-i18n="测试连接">测试连接</button>
               </div>
             </label>
+            <div class="field ngrokbox" id="ngrokBox" hidden>
+              <div class="row">
+                <button class="primary small" id="tunnelStartBtn" data-i18n="启动隧道">启动隧道</button>
+                <button class="ghost small" id="tunnelStopBtn" data-i18n="停止隧道" hidden>停止隧道</button>
+              </div>
+              <div class="kv">
+                <span data-i18n="隧道地址">隧道地址</span>
+                <b id="tunnelUrl">—</b>
+                <button class="linkbtn" id="tunnelCopyBtn" data-i18n="复制" hidden>复制</button>
+              </div>
+              <div class="kv"><span data-i18n="隧道状态">隧道状态</span><b id="tunnelState">—</b></div>
+            </div>
             <p class="hint" id="relayHelp">—</p>
             <div class="kv"><span data-i18n="中继状态">中继状态</span><b id="relayState">—</b></div>
           </div>

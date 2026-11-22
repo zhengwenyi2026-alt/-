@@ -1,6 +1,6 @@
 {
   "name": "skydrop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "隔空传 SkyDrop —— 免服务器、拖拽即传文件的跨平台应用，支持局域网直传与自建中继跨网段传输",
   "main": "src/main/index.js",
   "author": "xiaopacaisky",
@@ -18,7 +18,8 @@
     "release": "node scripts/release.js",
     "verify:packaged": "node test/verify-packaged-transfer.js",
     "verify:panel": "node test/panel-live.js",
-    "verify:text": "node test/text-live.js"
+    "verify:text": "node test/text-live.js",
+    "verify:tunnel": "node test/tunnel-live.js"
   },
   "dependencies": {
     "ws": "^8.23.0"

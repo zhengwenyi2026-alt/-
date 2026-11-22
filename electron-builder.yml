@@ -9,6 +9,8 @@ directories:
 
 files:
   - src/**/*
+  # ngrok 隧道要在应用内起本机中继，relay/ 的 ESM 核心必须一起进 asar
+  - relay/**/*
   - package.json
   - "!**/*.map"
 

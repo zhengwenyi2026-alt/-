@@ -8,7 +8,8 @@ const path = require('path');
 
 const { Hub, formatBytes } = require('./engine/hub');
 const { generateRoomCode } = require('./engine/roomCode');
-const { probeRelay } = require('./engine/relay');
+const { probeRelay, RELAY_PROVIDERS } = require('./engine/relay');
+const { findNgrok } = require('./engine/tunnel');
 const { MAX_TEXT_BYTES } = require('./engine/protocol');
 const { Store } = require('./store');
 const I18N = require('../common/i18n');
@@ -81,6 +82,9 @@ function push(event) {
 function initHub() {
   const deviceId = store.get('deviceId', null) || crypto.randomUUID();
   store.set({ deviceId });
+  // ngrok 每次启动分配的公网地址都不一样，重启后必然失效，不能沿用上次那条
+  const relayProvider = store.get('relayProvider', 'cloudflare');
+  const relayUrl = relayProvider === 'ngrok' ? '' : store.get('relayUrl', '');
   hub = new Hub({
     deviceId,
     deviceName: store.get('deviceName', null) || os.hostname() || tt('我的设备'),
@@ -90,15 +94,23 @@ function initHub() {
     autoApprove: Boolean(store.get('autoApprove', false)),
     allowPublic: Boolean(store.get('allowPublic', false)),
     relayEnabled: Boolean(store.get('relayEnabled', false)),
-    relayProvider: store.get('relayProvider', 'cloudflare'),
-    relayUrl: store.get('relayUrl', ''),
+    relayProvider,
+    relayUrl,
     appVersion: app.getVersion(),
   });
   hub.on('event', push);
   fsp.mkdir(hub.saveDir, { recursive: true }).catch(() => {});
   // 本机传输面板常驻，房间没开的时候也能看历史与设置；只绑 127.0.0.1
   hub.startPanel().catch(() => {});
+  detectNgrok().catch(() => {});
   return hub;
+}
+
+/** 在应用内检测 ngrok：装了才会在界面上出现「本机 ngrok 隧道」，没装就完全不显示 */
+async function detectNgrok() {
+  const info = await findNgrok();
+  if (hub) hub.setNgrok(info);
+  return info;
 }
 
 // ------------------------------------------------------------------ IPC
@@ -153,11 +165,16 @@ function registerIpc() {
     ok(async ({ relayUrl, relayProvider } = {}) => {
       const url = typeof relayUrl === 'string' && relayUrl.trim() ? relayUrl : hub.relayUrl;
       // 界面上还没保存的选择也要能先测，所以 provider 只认三个合法值，否则回落到已保存的
-      const provider = ['cloudflare', 'vercel', 'custom'].includes(relayProvider) ? relayProvider : hub.relayProvider;
+      const provider = RELAY_PROVIDERS.includes(relayProvider) ? relayProvider : hub.relayProvider;
       if (!String(url || '').trim()) throw new Error('请填写中继地址');
       return probeRelay({ input: url, provider, code: generateRoomCode() });
     })
   );
+
+  // ngrok 隧道：本机起中继 + 一条公网地址，界面上只有检测到的时候才有这两个入口
+  ipcMain.handle('skydrop:tunnel-start', ok(() => hub.startTunnel()));
+  ipcMain.handle('skydrop:tunnel-stop', ok(() => hub.stopTunnel()));
+  ipcMain.handle('skydrop:tunnel-detect', ok(() => detectNgrok()));
   ipcMain.handle(
     'skydrop:approve-join',
     ok((deviceId, approve) => {

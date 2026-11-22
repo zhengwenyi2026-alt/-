@@ -329,6 +329,12 @@ details code, .savebar code {
 #relayCard .relaybody { margin-top: 4px; }
 #relayCard .field { margin-bottom: 10px; }
 #relayTestBtn { flex: none; white-space: nowrap; }
+/* ngrok 隧道：应用内没检测到 ngrok 时整块连同下拉选项都不显示 */
+button.primary.small { padding: 5px 12px; font-size: 12px; }
+#ngrokBox { border-top: 1px dashed rgba(255, 255, 255, .14); padding-top: 10px; }
+#ngrokBox .row { margin-bottom: 4px; }
+#tunnelUrl { min-width: 0; margin-left: 10px; overflow-wrap: anywhere; text-align: right; font-size: 11.5px; }
+#tunnelCopyBtn { flex: none; }
 .altjoin { margin-top: 8px; }
 #joinRelayBtn { font-size: 12px; }
 #joinRelayBtn.mutedbtn { color: var(--muted); text-decoration: none; }

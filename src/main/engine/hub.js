@@ -12,6 +12,8 @@ const WebSocket = require('ws');
 const { Peer } = require('./peer');
 const I18N = require('../../common/i18n');
 const { parseRelayBase, dialRelay, openRelaySlots } = require('./relay');
+const { startTunnel: spawnNgrokTunnel } = require('./tunnel');
+const { pathToFileURL } = require('url');
 const { CHUNK_SIZE, PROTO_VERSION, MAX_TEXT_BYTES } = require('./protocol');
 const { generateRoomCode, normalizeRoomCode, formatRoomCode } = require('./roomCode');
 const { lanInterfaces, broadcastTargets, unicastProbeTargets, isPrivateAddress, pickLanAddress, resolveHostIp } = require('./net');
@@ -29,7 +31,8 @@ const APPROVE_TIMEOUT = 60_000;
 const MAX_BAD_CODE_PER_IP = 8;
 const HISTORY_KEEP = 60; // 传输记录保留条数
 const TEXTS_KEEP = 60; // 文本传送记录保留条数
-const RELAY_PROVIDERS = ['cloudflare', 'vercel', 'custom'];
+const RELAY_PROVIDERS = ['cloudflare', 'vercel', 'custom', 'ngrok'];
+const NGROK_RELAY_PATH = path.join(__dirname, '..', '..', '..', 'relay', 'node-server.js');
 
 function formatBytes(n) {
   const v = Number(n) || 0;
@@ -94,6 +97,12 @@ class Hub extends EventEmitter {
     this._relay = null; // 房主侧中继槽位池
     this._relayState = { status: 'off', error: '', host: '', endpoints: 0 };
     this._relaySeq = 0; // 给每条中继连接一个独立计数键，避免一个乱试房间码的人连带锁死别人
+    // ngrok 隧道：本机起一个中继，再让 ngrok 把它暴露成公网地址（没装 ngrok 时 installed 一直是 false）
+    this.ngrok = { installed: Boolean(opts.ngrokInstalled), path: String(opts.ngrokPath || ''), version: String(opts.ngrokVersion || '') };
+    this.tunnel = { status: 'off', url: '', error: '', relayPort: 0, pid: 0 };
+    this._tunnel = null; // tunnel.startTunnel 返回的句柄
+    this._localRelay = null; // 仅绑 127.0.0.1 的本机中继
+    this._stoppingTunnel = false;
   }
 
   // ------------------------------------------------------------ 事件出口
@@ -125,6 +134,7 @@ class Hub extends EventEmitter {
       },
       room: this.room ? { ...this.room, codeDisplay: formatRoomCode(this.room.code) } : null,
       relay: { ...this._relayState, enabled: this.relayEnabled, provider: this.relayProvider, url: this.relayUrl },
+      tunnel: { ...this.tunnel, installed: this.ngrok.installed, version: this.ngrok.version },
       joined: this._localGuestPeer
         ? {
             room: this._joinedRoom,
@@ -368,6 +378,108 @@ class Hub extends EventEmitter {
     } catch {}
     this._relay = null;
     this._relayState = { status: 'off', error: '', host: '', endpoints: 0 };
+  }
+
+  // ------------------------------------------------------------ ngrok 隧道（本机中继 + 公网地址）
+
+  /** 主进程启动后异步检测一次；界面按 installed 决定要不要露出 ngrok 入口 */
+  setNgrok(info = {}) {
+    this.ngrok = {
+      installed: Boolean(info.installed),
+      path: String(info.path || ''),
+      version: String(info.version || ''),
+    };
+    this._pushState();
+    return this.ngrok;
+  }
+
+  /** relay/ 是 ESM，主进程是 CJS，只能动态 import（打包后从 asar 里读，实测可用） */
+  async _ensureLocalRelay() {
+    if (this._localRelay) return this._localRelay;
+    const { createRelayServer } = await import(pathToFileURL(NGROK_RELAY_PATH).href);
+    this._localRelay = await createRelayServer({ port: 0, host: '127.0.0.1' });
+    return this._localRelay;
+  }
+
+  async _stopLocalRelay() {
+    const relay = this._localRelay;
+    this._localRelay = null;
+    if (!relay) return;
+    try {
+      await relay.close();
+    } catch {}
+  }
+
+  /** 单独抽一层是为了让自动化测试能替换掉真实的 ngrok 子进程 */
+  _spawnTunnel(opts) {
+    return spawnNgrokTunnel(opts);
+  }
+
+  /** 起隧道 → 拿到公网 https 地址 → 直接当中继地址用，房间开着就立刻挂上槽位 */
+  async startTunnel() {
+    if (this._disposed) throw new Error('应用正在退出');
+    if (!this.ngrok.installed) throw new Error('这台电脑上没有检测到 ngrok，请安装后重启隔空传');
+    if (this.tunnel.status === 'starting') throw new Error('隧道正在启动中，请稍候');
+    if (this._tunnel) return { url: this.tunnel.url, relayPort: this.tunnel.relayPort };
+    this.tunnel = { status: 'starting', url: '', error: '', relayPort: 0, pid: 0 };
+    this._pushState();
+    try {
+      const relay = await this._ensureLocalRelay();
+      this._localRelay = relay; // 关停只认这个字段，谁提供中继都一样
+      const handle = await this._spawnTunnel({
+        targetPort: relay.port,
+        ngrokPath: this.ngrok.path,
+        onExit: (reason) => this._onTunnelExit(reason),
+      });
+      this._tunnel = handle;
+      this.tunnel = { status: 'running', url: handle.url, error: '', relayPort: relay.port, pid: handle.pid };
+      this.relayEnabled = true;
+      this.relayProvider = 'ngrok';
+      this.relayUrl = handle.url;
+      if (this.room) this._openRelay();
+      this.notice('隧道已就绪，把这个地址发给对方：{url}', { url: handle.url });
+      this._pushState();
+      return { url: handle.url, relayPort: relay.port };
+    } catch (err) {
+      this._tunnel = null;
+      await this._stopLocalRelay();
+      this.tunnel = { status: 'error', url: '', error: err.message, relayPort: 0, pid: 0 };
+      this.notice('隧道启动失败：{msg}', { msg: err.message }, 'error');
+      this._pushState();
+      throw err;
+    }
+  }
+
+  /** ngrok 进程自己退了（配额、断网、终端里被关掉）时如实报状态，不能继续显示「运行中」 */
+  _onTunnelExit(reason) {
+    if (this._disposed || this._stoppingTunnel || !this._tunnel) return;
+    this._tunnel = null;
+    this._stopLocalRelay();
+    this._closeRelay();
+    this.tunnel = { status: 'error', url: '', error: reason || '隧道连接已断开', relayPort: 0, pid: 0 };
+    this.notice('隧道已断开：{msg}', { msg: reason || 'ngrok 进程退出了' }, 'warn');
+    this._pushState();
+  }
+
+  async stopTunnel() {
+    this._stoppingTunnel = true;
+    const handle = this._tunnel;
+    const url = this.tunnel.url;
+    this._tunnel = null;
+    if (handle) {
+      try {
+        handle.stop();
+      } catch {}
+    }
+    await this._stopLocalRelay();
+    if (this.relayProvider === 'ngrok') {
+      this._closeRelay();
+      if (!this.relayUrl || this.relayUrl === url) this.relayUrl = '';
+    }
+    this.tunnel = { status: 'off', url: '', error: '', relayPort: 0, pid: 0 };
+    this._stoppingTunnel = false;
+    this._pushState();
+    return true;
   }
 
   approveJoin(deviceId, ok) {
@@ -1083,6 +1195,7 @@ class Hub extends EventEmitter {
     }
     if (typeof patch.autoApprove === 'boolean') this.autoApprove = patch.autoApprove;
     if (typeof patch.allowPublic === 'boolean') this.allowPublic = patch.allowPublic;
+    const tunnelOwnedUrl = this.relayProvider === 'ngrok' && Boolean(this._tunnel);
     const relayTouched =
       (typeof patch.relayEnabled === 'boolean' && patch.relayEnabled !== this.relayEnabled) ||
       (typeof patch.relayProvider === 'string' && RELAY_PROVIDERS.includes(patch.relayProvider) && patch.relayProvider !== this.relayProvider) ||
@@ -1091,12 +1204,25 @@ class Hub extends EventEmitter {
     if (RELAY_PROVIDERS.includes(patch.relayProvider)) this.relayProvider = patch.relayProvider;
     if (typeof patch.relayUrl === 'string') this.relayUrl = patch.relayUrl.trim().slice(0, 200);
     if (relayTouched && this.room) this._openRelay(); // 槽位池按新配置重开
+    // 选了别的服务商就别让 ngrok 进程在后台空跑：隧道只为 provider=ngrok 存在
+    if (tunnelOwnedUrl && typeof patch.relayProvider === 'string' && patch.relayProvider !== 'ngrok') {
+      this.relayUrl = '';
+      this.stopTunnel().catch(() => {});
+    }
     if (I18N.isSupported(patch.language)) this.language = patch.language;
     this._pushState();
   }
 
   dispose() {
     this._disposed = true;
+    this._stoppingTunnel = true;
+    if (this._tunnel) {
+      try {
+        this._tunnel.stop();
+      } catch {}
+      this._tunnel = null;
+    }
+    this._stopLocalRelay();
     for (const peer of this.peers.values()) peer.close();
     this.peers.clear();
     this.stopRoom();

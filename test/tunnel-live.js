@@ -176,6 +176,55 @@ function health(url) {
     check(afterSelect.enabled && afterSelect.provider === 'ngrok', '选中 ngrok 后自动打开中继总开关', JSON.stringify(afterSelect));
     await page.screenshot({ path: path.join(OUT, '1-跨网卡片-隧道面板.png'), fullPage: true });
 
+    // ---- 固定地址：填一个不属于本账号的保留域名，ngrok 会拒绝，界面要给出中文下一步
+    await page.evaluate(() => {
+      const el = document.getElementById('ngrokDomain');
+      el.value = 'notmine-0a1b2c.ngrok-free.app';
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await waitFor(async () => (await state()).tunnel.domain === 'notmine-0a1b2c.ngrok-free.app', 15_000, '固定地址没写进设置');
+    check(await page.$eval('#ngrokDomain', (n) => n.value === 'notmine-0a1b2c.ngrok-free.app'), '隧道面板里的固定地址输入框可用并回填');
+    await clickNode(page, '#tunnelStartBtn');
+    let badErr = '';
+    try {
+      badErr = await waitFor(async () => {
+        const s = await state();
+        return s.tunnel.status === 'error' ? s.tunnel.error : null;
+      }, 60_000, '用别人的保留域名居然启动了隧道');
+    } catch (e) {
+      const s = await state();
+      if (s.tunnel.status === 'running') {
+        await clickNode(page, '#tunnelStopBtn');
+        throw new Error('固定地址本该被 ngrok 拒绝，却起来了：' + s.tunnel.url);
+      }
+      throw e;
+    }
+    check(/固定地址用不了|不在当前 ngrok 账号名下/.test(badErr), '固定地址被拒时翻成能照做的中文', badErr);
+    // 渲染是 50ms 去抖合帧的，直接读会拿到上一帧的「正在启动隧道…」
+    let badState = '';
+    try {
+      badState = await waitFor(
+        async () => {
+          const text = await page.$eval('#tunnelState', (n) => n.textContent);
+          return /隧道异常/.test(text) ? text : null;
+        },
+        5_000,
+        '固定地址报错后界面没显示异常状态',
+      );
+    } catch (e) {
+      badState = await page.$eval('#tunnelState', (n) => n.textContent);
+    }
+    check(/隧道异常/.test(badState), '隧道面板显示异常状态', badState);
+    check(execSync('pgrep -fl "ngrok http" || true').toString().trim() === '', '固定地址报错后没留残留 ngrok 进程');
+    await page.screenshot({ path: path.join(OUT, '2-固定地址报错.png'), fullPage: true });
+    // 清空回到每次随机分配的地址，后面的正常流程照常跑
+    await page.evaluate(() => {
+      const el = document.getElementById('ngrokDomain');
+      el.value = '';
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await waitFor(async () => (await state()).tunnel.domain === '', 15_000, '清空固定地址没写进设置');
+
     // ---- 建房 + 起隧道
     await page.click('#createRoomBtn');
     await waitFor(() => page.$eval('#hostLive', (n) => !n.hidden), 20_000, '未出现房间面板');
@@ -210,13 +259,15 @@ function health(url) {
             startHidden: document.getElementById('tunnelStartBtn').hidden,
             stopHidden: document.getElementById('tunnelStopBtn').hidden,
             copyHidden: document.getElementById('tunnelCopyBtn').hidden,
+            domainDisabled: document.getElementById('ngrokDomain').disabled,
           }))
           .then((v) => (v.url === running.tunnel.url ? v : null)),
       15_000,
       '隧道面板没显示公网地址'
     );
     check(/运行中/.test(uiTun.state) && uiTun.startHidden && !uiTun.stopHidden && !uiTun.copyHidden, '隧道面板显示地址与状态、按钮互斥', JSON.stringify(uiTun));
-    await page.screenshot({ path: path.join(OUT, '2-隧道运行中.png'), fullPage: true });
+    check(uiTun.domainDisabled === true, '隧道运行中锁住固定地址输入框（改了要重启隧道才生效）');
+    await page.screenshot({ path: path.join(OUT, '3-隧道运行中.png'), fullPage: true });
 
     const h = await health(tun.url);
     check(h.status === 200, '公网侧 GET /health 打得通', JSON.stringify(h));
@@ -282,10 +333,11 @@ function health(url) {
     check(off.relay.url === '' && off.relay.provider === 'ngrok', '停隧道后不留过期的公网地址', JSON.stringify(off.relay));
     const gone = await waitFor(() => page.evaluate(() => document.getElementById('tunnelUrl').textContent).then((v) => (v === '—' ? v : null)), 15_000, '界面地址没回到占位').catch(() => 'TIMEOUT');
     check(gone === '—', '界面地址回到占位', gone);
+    check(await page.$eval('#ngrokDomain', (n) => n.disabled === false), '停隧道后固定地址输入框重新可编辑');
     // 本机中继收掉之后，公网那条地址就该 4xx/连不上；放在界面校验之后再查，别把隧道收得不干净当成界面问题
     const stillUp = await health(tun.url);
     check(stillUp.status !== 200, 'ngrok 收掉后公网地址不再通向本机', JSON.stringify(stillUp));
-    await page.screenshot({ path: path.join(OUT, '3-隧道已停止.png'), fullPage: true });
+    await page.screenshot({ path: path.join(OUT, '4-隧道已停止.png'), fullPage: true });
 
     check(errs.length === 0, '渲染进程没有报错', errs.join(' | '));
     log(`截图与主进程日志已存到 ${OUT}`);

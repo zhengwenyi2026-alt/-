@@ -96,6 +96,7 @@ function initHub() {
     relayEnabled: Boolean(store.get('relayEnabled', false)),
     relayProvider,
     relayUrl,
+    ngrokDomain: String(store.get('ngrokDomain', '') || ''),
     appVersion: app.getVersion(),
   });
   hub.on('event', push);
@@ -277,6 +278,7 @@ function registerIpc() {
         relayEnabled: hub.relayEnabled,
         relayProvider: hub.relayProvider,
         relayUrl: hub.relayUrl,
+        ngrokDomain: hub.ngrokDomain,
         language: hub.language,
       });
       return true;

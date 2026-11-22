@@ -291,6 +291,8 @@ function renderTunnel(st) {
   const starting = u.status === 'starting';
   $('tunnelStartBtn').hidden = running;
   $('tunnelStartBtn').disabled = starting;
+  // 域名改了要重连才生效，运行中直接锁住，避免出现「界面写的和实际通的不一样」
+  $('ngrokDomain').disabled = running || starting;
   $('tunnelStopBtn').hidden = !running;
   $('tunnelUrl').textContent = running ? u.url : '—';
   $('tunnelUrl').className = running ? 'ok' : u.status === 'error' ? 'bad' : '';
@@ -856,6 +858,10 @@ function bindStatic() {
     await refresh();
   };
   $('setRelayUrl').addEventListener('change', saveRelayUrl);
+  $('ngrokDomain').addEventListener('change', saveRelayUrl);
+  $('ngrokDomain').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveRelayUrl();
+  });
   $('setRelayUrl').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') saveRelayUrl();
   });
@@ -900,6 +906,7 @@ function settingsPatch() {
     relayEnabled: $('setRelayEnabled').checked,
     relayProvider: provider,
     relayUrl: $('setRelayUrl').value.trim(),
+    ngrokDomain: $('ngrokDomain').value.trim(),
   };
   // ngrok 的中继地址由隧道自己写入引擎，输入框是空的，不能把空串存回去覆盖掉
   if (provider === 'ngrok') delete patch.relayUrl;
@@ -929,6 +936,7 @@ function syncSettingsInputs(st) {
   $('setRelayEnabled').checked = Boolean(st.settings.relayEnabled);
   if (document.activeElement !== $('setRelayUrl')) $('setRelayUrl').value = st.settings.relayUrl || '';
   if (document.activeElement !== $('setRelayProvider')) $('setRelayProvider').value = activeProvider(st);
+  if (document.activeElement !== $('ngrokDomain')) $('ngrokDomain').value = (st.tunnel || {}).domain || '';
 }
 
 // ---------------------------------------------------------------- 启动

@@ -1352,3 +1352,120 @@ test('IPC 契约：隧道的入口在主进程、preload、界面三处名字对
     assert.match(app, new RegExp(`api\\.${method}\\(`), `界面没调用 ${method}`);
   }
 });
+
+test('固定地址：域名规范化，非法输入只给一句能照做的提示', () => {
+  assert.equal(tunnel.normalizeNgrokDomain(''), '');
+  assert.equal(tunnel.normalizeNgrokDomain('   '), '');
+  assert.equal(tunnel.normalizeNgrokDomain('ABC123.Ngrok-Free.app'), 'abc123.ngrok-free.app');
+  assert.equal(tunnel.normalizeNgrokDomain('https://abc123.ngrok-free.app/'), 'abc123.ngrok-free.app');
+  assert.equal(tunnel.normalizeNgrokDomain('wss://abc123.ngrok-free.app:443/relay'), 'abc123.ngrok-free.app');
+  for (const bad of ['abc', 'not a domain', 'a..b', '-bad.ngrok.app', 'bad-.ngrok.app', `${'a'.repeat(130)}.app`]) {
+    assert.throws(() => tunnel.normalizeNgrokDomain(bad), /固定地址要填 ngrok 账号名下的域名/, `要拦住：${bad}`);
+  }
+});
+
+test('固定地址：启动隧道时把 --url 交给 ngrok，非法域名不起进程', async () => {
+  let spawned = null;
+  const child = fakeNgrok({ stdout: `${tunnelLog('https://mine.ngrok-free.app', 8791)}\n` });
+  const handle = await tunnel.startTunnel({
+    targetPort: 8791,
+    domain: 'Mine.ngrok-free.app',
+    pollMs: 10,
+    spawnImpl: (bin, args) => {
+      spawned = args;
+      return child;
+    },
+    getJsonImpl: async () => {
+      throw new Error('日志里就有地址，不该去查检查接口');
+    },
+  });
+  assert.equal(handle.url, 'https://mine.ngrok-free.app');
+  assert.deepEqual(spawned, ['http', '8791', '--log=stdout', '--log-format=json', '--url=mine.ngrok-free.app']);
+  handle.stop();
+
+  let touched = false;
+  await assert.rejects(
+    () =>
+      tunnel.startTunnel({
+        targetPort: 8791,
+        domain: '这不是域名',
+        pollMs: 10,
+        spawnImpl: () => {
+          touched = true;
+          return fakeNgrok({});
+        },
+      }),
+    /固定地址要填 ngrok 账号名下的域名/
+  );
+  assert.equal(touched, false, '域名不合法就该在起 ngrok 之前拦住');
+});
+
+test('固定地址：ngrok 关于套餐与域名归属的报错要翻成中文下一步', () => {
+  assert.match(
+    tunnel.ngrokErrorText(
+      'failed to start tunnel: Only paid plans may create endpoints with custom subdomains.\r\nERR_NGROK_313'
+    ),
+    /免费版只能用 ngrok 控制台「Domains」里领到的那一个保留域名/
+  );
+  assert.match(
+    tunnel.ngrokErrorText('The hostname "abc.ngrok-free.app" is not reserved by your account ERR_NGROK_4903'),
+    /这个域名不在当前 ngrok 账号名下/
+  );
+});
+
+test('hub：固定地址随设置保存、随状态回报，并透传给隧道', async () => {
+  const hub = new Hub({
+    deviceName: '固定域名房主',
+    saveDir: tmpDir('tunnel-domain'),
+    udpPort: 47861,
+    relayEnabled: true,
+    relayProvider: 'ngrok',
+    ngrokDomain: 'mine.ngrok-free.app',
+  });
+  hub.setNgrok({ installed: true, path: '/opt/homebrew/bin/ngrok', version: '3.37.2' });
+  assert.equal(hub.state().tunnel.domain, 'mine.ngrok-free.app');
+  let seen = null;
+  hub._ensureLocalRelay = async () => ({ port: 8791, close: async () => {} });
+  hub._spawnTunnel = async (opts) => {
+    seen = opts;
+    return { url: `https://${opts.domain}`, host: opts.domain, pid: 11, stop: () => {} };
+  };
+  await hub.startTunnel();
+  assert.equal(seen.domain, 'mine.ngrok-free.app', '隧道要拿到设置里的固定地址');
+  assert.equal(hub.state().tunnel.url, 'https://mine.ngrok-free.app');
+
+  hub.setSettings({ ngrokDomain: ' Other.Ngrok.App ' });
+  assert.equal(hub.state().tunnel.domain, 'other.ngrok.app', '存下来就要小写去空格');
+  hub.setSettings({ ngrokDomain: '' });
+  assert.equal(hub.state().tunnel.domain, '', '清空等于回到每次随机');
+  hub.dispose();
+});
+
+test('hub：隧道报错按界面语言翻译，英文用户不看中文', async () => {
+  const hub = new Hub({ deviceName: 'EN 房主', saveDir: tmpDir('tunnel-i18n'), udpPort: 47863, language: 'en' });
+  hub.setNgrok({ installed: true, path: '/opt/homebrew/bin/ngrok', version: '3.37.2' });
+  hub._ensureLocalRelay = async () => ({ port: 8791, close: async () => {} });
+  hub._spawnTunnel = async () => {
+    throw new Error('这个固定地址用不了：免费版只能用 ngrok 控制台「Domains」里领到的那一个保留域名，自定义子域名要付费套餐（留空则每次随机分配地址）');
+  };
+  await assert.rejects(() => hub.startTunnel());
+  assert.match(hub.state().tunnel.error, /free plan only allows the one reserved domain/);
+  hub.dispose();
+});
+
+test('固定地址：输入框、设置透传、状态回读三处名字对得上', () => {
+  const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
+  const html = read('src/renderer/index.html');
+  const app = read('src/renderer/app.js');
+  const hubSrc = read('src/main/engine/hub.js');
+  const mainSrc = read('src/main/index.js');
+
+  assert.match(html, /<input id="ngrokDomain"/, '界面要有固定地址输入框');
+  assert.match(app, /ngrokDomain: \$\('ngrokDomain'\)\.value\.trim\(\),/, '设置里要带上固定地址');
+  assert.match(app, /\$\('ngrokDomain'\)\.disabled = running \|\| starting;/, '隧道运行中要锁住输入框');
+  assert.match(app, /\$\('ngrokDomain'\)\.value = \(st\.tunnel \|\| \{\}\)\.domain \|\| '';/, '状态要能回填输入框');
+  assert.match(hubSrc, /domain: this\.ngrokDomain,/, 'hub 要把域名交给 tunnel');
+  assert.match(hubSrc, /typeof patch\.ngrokDomain === 'string'/, 'setSettings 要认这个字段');
+  assert.match(mainSrc, /ngrokDomain: hub\.ngrokDomain,/, '主进程要持久化它');
+  assert.match(mainSrc, /ngrokDomain: String\(store\.get\('ngrokDomain'/, '启动时要读回来');
+});

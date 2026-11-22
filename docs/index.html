@@ -193,7 +193,7 @@
   <section class="card">
     <h2>不在同一个网络也能传</h2>
     <p>主界面右侧的<b>「跨网传输」</b>卡片默认关闭。打开后填一个你自己部署的 WebSocket 中继地址（Cloudflare Workers / Vercel / 任意一台有公网地址的机器），房主把房间挂到中继上，访客在任意网络输入同一个房间码就能加入——之后的接收确认、进度、校验和局域网完全一样。Cloudflare 部署只需两条命令，免费额度对偶尔传文件完全够用。</p>
-    <p><b>不想部署任何东西</b>：这台电脑上装了 <span class="mono">ngrok</span>（3.x，免费版即可）时，服务商列表里会多出<b>「ngrok · 本机隧道」</b>。房主点一下<b>「启动隧道」</b>，应用就在本机回环起一个中继、让 ngrok 给它一条公网 <span class="mono">https://xxxx.ngrok-free.app</span>；把地址复制发给对方，对方选<b>「自建 / 其它」</b>粘进去，再输 6 位房间码就能传。<b>没装 ngrok 时界面上完全不出现这一项</b>，不会留一个点不动的按钮。免费版每次分配的域名都不一样，所以这条地址只在这一趟传输里有效——停止隧道或退出应用就收掉，下次重新点一次。</p>
+    <p><b>不想部署任何东西</b>：这台电脑上装了 <span class="mono">ngrok</span>（3.x，免费版即可）时，服务商列表里会多出<b>「ngrok · 本机隧道」</b>。房主点一下<b>「启动隧道」</b>，应用就在本机回环起一个中继、让 ngrok 给它一条公网 <span class="mono">https://xxxx.ngrok-free.app</span>；把地址复制发给对方，对方选<b>「自建 / 其它」</b>粘进去，再输 6 位房间码就能传。<b>没装 ngrok 时界面上完全不出现这一项</b>，不会留一个点不动的按钮。不填别的时，免费版每次分配的域名都不一样，这条地址只在这一趟传输里有效——停止隧道或退出应用就收掉，下次重新点一次。想让它固定：ngrok 免费账号也能在控制台「Domains」领一个保留域名，填进<b>「固定地址（可选）」</b>，以后每次启动隧道都是同一条地址。</p>
     <p class="hint">部署与排错说明：<a class="plain" href="https://github.com/zhengwenyi2026-alt/-/blob/main/relay/README.md">relay/README.md</a>。没开跨网传输时应用没有任何出站连接；用 ngrok 时出站也只指向 ngrok 的服务，那个内置中继始终只监听 <span class="mono">127.0.0.1</span>，局域网里其它设备摸不到它。</p>
   </section>
 
@@ -223,7 +223,7 @@
 
   <section class="card">
     <h2>校验和（sha256）</h2>
-    <p class="hint">下载后可以先比对再安装，例如 <span class="mono">shasum -a 256 SkyDrop-1.0.3-arm64.dmg</span>（Windows：<span class="mono">certutil -hashfile 文件名 SHA256</span>）。</p>
+    <p class="hint">下载后可以先比对再安装，例如 <span class="mono">shasum -a 256 SkyDrop-1.0.4-arm64.dmg</span>（Windows：<span class="mono">certutil -hashfile 文件名 SHA256</span>）。</p>
     <div id="sums" style="display:grid; gap:10px"></div>
   </section>
 
@@ -234,22 +234,22 @@
 </div>
 
 <script>
-  var BASE = 'https://github.com/zhengwenyi2026-alt/-/releases/download/v1.0.3/';
+  var BASE = 'https://github.com/zhengwenyi2026-alt/-/releases/download/v1.0.4/';
   var FILES = [
-    { name: 'SkyDrop-1.0.3-arm64.dmg', size: '108.3 MB', label: 'Apple Silicon Mac（M1/M2/M3/M4）', os: 'mac', arch: 'arm64', kind: 'dmg',
-      sum: '786d903245962dd9dbfe432978a29682d56dc633acbeed1428102a3b8ba3429b' },
-    { name: 'SkyDrop-1.0.3-x64.dmg', size: '111.2 MB', label: 'Intel Mac', os: 'mac', arch: 'x64', kind: 'dmg',
-      sum: '925a78fffcb54dcf2eae38d10c34f0a7916750074a640a79746dd756110085fc' },
-    { name: 'SkyDrop-1.0.3-arm64.zip', size: '112.9 MB', label: 'Mac 免挂载（解压即得 .app）', os: 'mac', arch: 'arm64', kind: 'zip',
-      sum: '982d4be057f4d65160a6ef02615f3e62b894b36fdc6670a1b2e72a80b986746f' },
-    { name: 'SkyDrop-Setup-1.0.3-x64.exe', size: '116.1 MB', label: 'Windows 10/11 安装版', os: 'win', arch: 'x64', kind: 'exe',
-      sum: '9a3c436444b5868f14f57b396c21f97a59c0aa9a574d09075b0da06e05ae85e4' },
-    { name: 'SkyDrop-Setup-1.0.3-arm64.exe', size: '110.5 MB', label: 'Windows ARM64 安装版（骁龙笔记本等）', os: 'win', arch: 'arm64', kind: 'exe',
-      sum: '5a5d3cc482bd69f619f88042a05f19ecef3782819b953fc42d36443b842232cd' },
-    { name: 'SkyDrop-Portable-1.0.3-x64.exe', size: '105.5 MB', label: 'Windows 免安装单文件', os: 'win', arch: 'x64', kind: 'portable',
-      sum: '18b93c8c0e363b2aec90b76eacf8e258332538fc0f84fb5f4b63cb29568da19f' },
-    { name: 'SkyDrop-Portable-1.0.3-arm64.exe', size: '100.6 MB', label: 'Windows ARM64 免安装单文件', os: 'win', arch: 'arm64', kind: 'portable',
-      sum: '8ef6916880d03cbbfd341555cfba758138fcc3cbf33819ea06675ba4c7498735' }
+    { name: 'SkyDrop-1.0.4-arm64.dmg', size: '108.3 MB', label: 'Apple Silicon Mac（M1/M2/M3/M4）', os: 'mac', arch: 'arm64', kind: 'dmg',
+      sum: 'ac973d0b5d0b21e05ba080a3d34e60c297e195c501d25a72d422d813876e5de7' },
+    { name: 'SkyDrop-1.0.4-x64.dmg', size: '111.2 MB', label: 'Intel Mac', os: 'mac', arch: 'x64', kind: 'dmg',
+      sum: '49214611bca690c67956952d8b7311861dd0d08e67a42c34f67e9d64a3474908' },
+    { name: 'SkyDrop-1.0.4-arm64.zip', size: '112.9 MB', label: 'Mac 免挂载（解压即得 .app）', os: 'mac', arch: 'arm64', kind: 'zip',
+      sum: '9ec37cd558dea70d0bb2ec98ddf8506be45bc588cdca1619c60969b657badf24' },
+    { name: 'SkyDrop-Setup-1.0.4-x64.exe', size: '116.1 MB', label: 'Windows 10/11 安装版', os: 'win', arch: 'x64', kind: 'exe',
+      sum: 'd7ee910d4312cffdef27379a0766f9d9b91324aaea5057d91ead21785ec5413c' },
+    { name: 'SkyDrop-Setup-1.0.4-arm64.exe', size: '110.5 MB', label: 'Windows ARM64 安装版（骁龙笔记本等）', os: 'win', arch: 'arm64', kind: 'exe',
+      sum: '07e8ee1462b966f8794c236e837eb758158e6ded9716c7f78c344a8168f7bcfe' },
+    { name: 'SkyDrop-Portable-1.0.4-x64.exe', size: '105.6 MB', label: 'Windows 免安装单文件', os: 'win', arch: 'x64', kind: 'portable',
+      sum: '7b8fcc7ea204a606972e9798ecabf907ee15a785e36be501e8060690e687d847' },
+    { name: 'SkyDrop-Portable-1.0.4-arm64.exe', size: '100.6 MB', label: 'Windows ARM64 免安装单文件', os: 'win', arch: 'arm64', kind: 'portable',
+      sum: '7626718cf3d6cebfc8cd004b59f73119d5cb522a5abba65d4cbfb0263c6dbc8f' }
   ];
 
   function url(name) { return BASE + encodeURIComponent(name); }

@@ -1,6 +1,6 @@
 {
   "name": "skydrop",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "隔空传 SkyDrop —— 免服务器、拖拽即传文件的跨平台应用，支持局域网直传与自建中继跨网段传输",
   "main": "src/main/index.js",
   "author": "xiaopacaisky",

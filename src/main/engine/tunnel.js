@@ -20,10 +20,36 @@ const NGROK_API_PORT = 4040; // ngrok 本机检查接口默认端口
 const AUTHTOKEN_HINT =
   'ngrok 还没有配置 authtoken，请在终端执行：ngrok config add-authtoken <你的令牌>（令牌见 https://dashboard.ngrok.com/get-started/authtoken），配好后回到这里点「启动隧道」';
 
+const DOMAIN_HINT = '固定地址要填 ngrok 账号名下的域名，例如 abc123.ngrok-free.app；留空就用每次随机分配的地址';
+
+const STATIC_DOMAIN_PLAN =
+  '这个固定地址用不了：免费版只能用 ngrok 控制台「Domains」里领到的那一个保留域名，自定义子域名要付费套餐（留空则每次随机分配地址）';
+
+const STATIC_DOMAIN_FOREIGN =
+  '这个域名不在当前 ngrok 账号名下：请到 ngrok 控制台「Domains」确认领到的保留域名，或留空用每次随机分配的地址';
+
+/**
+ * 固定地址：ngrok 控制台「Domains」里领到的保留域名（免费版每个账号一个）。
+ * 允许直接粘 `https://xxx.ngrok-free.app/`，只取主机名，其它一律当没填。
+ */
+function normalizeNgrokDomain(input) {
+  const raw = String(input || '').trim().toLowerCase();
+  if (!raw) return '';
+  const host = raw.replace(/^[a-z][a-z0-9+.-]*:\/\//, '').split('/')[0].split(':')[0].trim();
+  if (host.length > 120 || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(host)) {
+    throw new Error(DOMAIN_HINT);
+  }
+  return host;
+}
+
 /** ngrok 的错误文案偏工程师，这里翻译成能照着做的下一步 */
 function ngrokErrorText(detail) {
   const text = String(detail || '');
   if (/authtoken|auth token|authentication failed/i.test(text)) return AUTHTOKEN_HINT;
+  if (/ERR_NGROK_313|custom subdomains|only paid plans/i.test(text)) return STATIC_DOMAIN_PLAN;
+  if (/ERR_NGROK_4903|not reserved|does not belong to your account|unrecognized hostname|reserved by (?:a|another)/i.test(text)) {
+    return STATIC_DOMAIN_FOREIGN;
+  }
   if (/usage limit|limit reached|too many|limited to \d+ simultaneous|simultaneous ngrok agent|only \d+ (agent|tunnel)/i.test(text)) {
     return 'ngrok 免费账号同时只能开一条隧道，请先停掉其它设备上的隧道（或升级套餐）再试';
   }
@@ -231,6 +257,8 @@ async function startTunnel(opts = {}) {
   // ngrok 3.x 的 http 子命令没有 --inspect-addr/--no-browser：检查端口被占时它自己顺延，
   // 也不会弹浏览器，所以这里只要把日志引到 stdout 就能拿到公网地址。
   const args = ['http', String(port), '--log=stdout', '--log-format=json'];
+  const domain = normalizeNgrokDomain(opts.domain);
+  if (domain) args.push(`--url=${domain}`);
 
   let child;
   try {
@@ -331,6 +359,7 @@ module.exports = {
   standardDirs,
   parseNgrokVersion,
   ngrokErrorText,
+  normalizeNgrokDomain,
   pickPublicUrl,
   urlFromLogLine,
   webPortFromLogLine,

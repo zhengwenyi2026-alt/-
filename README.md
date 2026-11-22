@@ -2,7 +2,7 @@
 
 局域网内**免服务器、拖拽即传**文件的跨平台桌面应用。一台设备点「创建房间」拿到 6 位房间码，另一台设备输入房间码加入，然后把文件拖进窗口、按「开始传送」，文件就出现在对方电脑的下载目录里——体验对齐苹果「隔空投送」，但**Windows 与 Mac 之间都能互传**。不在同一个网络时，还能挂一个自己的中继（Cloudflare / Vercel / 自建 Node）跨网段传输。
 
-**下载站**：<https://zhengwenyi2026-alt.github.io/-/> ｜ **Release 与安装包**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.3>
+**下载站**：<https://zhengwenyi2026-alt.github.io/-/> ｜ **Release 与安装包**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.4>
 
 > 命名说明：「隔空投送 / AirDrop」是 Apple Inc. 的注册商标，本项目与之**没有任何关系**，不使用、也不逆向任何 Apple 私有协议。隔空传 / SkyDrop 是一个独立的原创名称与实现。
 
@@ -57,30 +57,30 @@
 ## 下载安装
 
 **下载站**：<https://zhengwenyi2026-alt.github.io/-/>（按打开页面的系统自动推荐安装包，附 sha256）
-**Release**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.3>
+**Release**：<https://github.com/zhengwenyi2026-alt/-/releases/tag/v1.0.4>
 
 | 平台 | 下载文件 | 体积 | 安装方式 |
 | --- | --- | --- | --- |
-| Apple Silicon Mac | `SkyDrop-1.0.3-arm64.dmg` | 108.3 MB | 打开 dmg → 把图标拖进 `Applications` |
-| Intel Mac | `SkyDrop-1.0.3-x64.dmg` | 111.2 MB | 同上 |
-| macOS 免挂载 | `SkyDrop-1.0.3-arm64.zip` | 112.9 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
-| Windows 10/11（x64） | `SkyDrop-Setup-1.0.3-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式；安装时请求一次 UAC 并自动添加防火墙放行规则 |
-| Windows ARM64 | `SkyDrop-Setup-1.0.3-arm64.exe` | 110.5 MB | 同上（骁龙等 ARM 笔记本） |
-| Windows 免安装（x64） | `SkyDrop-Portable-1.0.3-x64.exe` | 105.5 MB | 单文件双击直接运行 |
-| Windows 免安装（ARM64） | `SkyDrop-Portable-1.0.3-arm64.exe` | 100.6 MB | 单文件双击直接运行 |
+| Apple Silicon Mac | `SkyDrop-1.0.4-arm64.dmg` | 108.3 MB | 打开 dmg → 把图标拖进 `Applications` |
+| Intel Mac | `SkyDrop-1.0.4-x64.dmg` | 111.2 MB | 同上 |
+| macOS 免挂载 | `SkyDrop-1.0.4-arm64.zip` | 112.9 MB | 解压得到 `隔空传.app`，直接拖进 `Applications` |
+| Windows 10/11（x64） | `SkyDrop-Setup-1.0.4-x64.exe` | 116.1 MB | NSIS 安装向导，可选安装目录，创建桌面/开始菜单快捷方式；安装时请求一次 UAC 并自动添加防火墙放行规则 |
+| Windows ARM64 | `SkyDrop-Setup-1.0.4-arm64.exe` | 110.5 MB | 同上（骁龙等 ARM 笔记本） |
+| Windows 免安装（x64） | `SkyDrop-Portable-1.0.4-x64.exe` | 105.5 MB | 单文件双击直接运行 |
+| Windows 免安装（ARM64） | `SkyDrop-Portable-1.0.4-arm64.exe` | 100.6 MB | 单文件双击直接运行 |
 
 Release 资产用英文名 `SkyDrop-` 开头（非 ASCII 文件名在部分下载工具里会被转义），安装后的应用名仍然是**「隔空传」**。本机 `npm run release` 出来的文件在 `可执行文件/` 下，名字是中文的 `隔空传-…`，内容与 Release 资产逐字节相同（`dist/` 是构建中间目录）。
 
 sha256：
 
 ```
-786d903245962dd9dbfe432978a29682d56dc633acbeed1428102a3b8ba3429b  SkyDrop-1.0.3-arm64.dmg
-925a78fffcb54dcf2eae38d10c34f0a7916750074a640a79746dd756110085fc  SkyDrop-1.0.3-x64.dmg
-982d4be057f4d65160a6ef02615f3e62b894b36fdc6670a1b2e72a80b986746f  SkyDrop-1.0.3-arm64.zip
-9a3c436444b5868f14f57b396c21f97a59c0aa9a574d09075b0da06e05ae85e4  SkyDrop-Setup-1.0.3-x64.exe
-5a5d3cc482bd69f619f88042a05f19ecef3782819b953fc42d36443b842232cd  SkyDrop-Setup-1.0.3-arm64.exe
-18b93c8c0e363b2aec90b76eacf8e258332538fc0f84fb5f4b63cb29568da19f  SkyDrop-Portable-1.0.3-x64.exe
-8ef6916880d03cbbfd341555cfba758138fcc3cbf33819ea06675ba4c7498735  SkyDrop-Portable-1.0.3-arm64.exe
+ac973d0b5d0b21e05ba080a3d34e60c297e195c501d25a72d422d813876e5de7  SkyDrop-1.0.4-arm64.dmg
+49214611bca690c67956952d8b7311861dd0d08e67a42c34f67e9d64a3474908  SkyDrop-1.0.4-x64.dmg
+9ec37cd558dea70d0bb2ec98ddf8506be45bc588cdca1619c60969b657badf24  SkyDrop-1.0.4-arm64.zip
+d7ee910d4312cffdef27379a0766f9d9b91324aaea5057d91ead21785ec5413c  SkyDrop-Setup-1.0.4-x64.exe
+07e8ee1462b966f8794c236e837eb758158e6ded9716c7f78c344a8168f7bcfe  SkyDrop-Setup-1.0.4-arm64.exe
+7b8fcc7ea204a606972e9798ecabf907ee15a785e36be501e8060690e687d847  SkyDrop-Portable-1.0.4-x64.exe
+7626718cf3d6cebfc8cd004b59f73119d5cb522a5abba65d4cbfb0263c6dbc8f  SkyDrop-Portable-1.0.4-arm64.exe
 ```
 
 ### macOS 首次打开
@@ -158,7 +158,7 @@ t('已连接：{name}', { name: peer.peerName })   // en → "Connected: Mac"
 - **传输中**：每条任务一个卡片，含总进度条、单文件进度、当前速率、剩余时间、成功/失败标记。
 - **最近记录 + 保存目录**：历史条目（方向、文件名、大小、时间、校验结果），「在访达中显示」「打开保存目录」；保存目录可自定义。
 - **浮动请求卡**：加入请求、接收请求，带「允许 / 拒绝」「接收 / 拒绝」。
-- **跨网传输卡片**（主界面右侧，不在 ⚙ 设置里；点「对方不在同一网络？经中继加入」会自动滚到这里）：「允许通过互联网连接」开关 + 服务商（Cloudflare / Vercel / 自建 / 检测到 ngrok 时多出的「ngrok · 本机隧道」）+ 中继地址 + 测试连接 + 隧道面板（启动 / 停止 / 地址 / 复制 / 状态）+ 实时中继状态。
+- **跨网传输卡片**（主界面右侧，不在 ⚙ 设置里；点「对方不在同一网络？经中继加入」会自动滚到这里）：「允许通过互联网连接」开关 + 服务商（Cloudflare / Vercel / 自建 / 检测到 ngrok 时多出的「ngrok · 本机隧道」）+ 中继地址 + 测试连接 + 隧道面板（**固定地址（可选）** 输入 / 启动 / 停止 / 地址 / 复制 / 状态）+ 实时中继状态。
 - **设置**（右上角 ⚙）：设备名、语言、保存目录、是否自动接收文件、是否自动允许加入、是否允许公网地址连接、**本机传输面板地址**（只读 + 「复制」+「打开」）。
 
 ---
@@ -231,13 +231,15 @@ ngrok 把「部署一台公网中继」压成一次点击。应用启动时会�
 
 1. 房主在**跨网传输**卡片里把服务商选成 **ngrok · 本机隧道**（选它会自动打开「允许通过互联网连接」）→ 点 **创建房间** → 点 **启动隧道**。
 2. 应用在 `127.0.0.1` 的随机端口上起一个内置中继（就是 `relay/node-server.js` 那份代码，不对外监听），拉起 `ngrok http <那个端口>`，拿到一条 `https://xxxx.ngrok-free.app`，自动填进本次会话的中继地址并挂上 3 条槽位。面板上点 **复制**，把地址发给对方。
-3. 对方在**自己**的「跨网传输」卡片里选 **自建 / 其它**、把这条地址粘进 **中继地址**、点 **测试连接**（通了说明对方确实能从公网摸到你这台机器），然后在房间码输入框下点 **「对方不在同一网络？经中继加入」**，输 6 位房间码。
-4. 之后与平时的跨网传输一模一样：房主点「允许」、发送方点「开始传送」、接收方点「接收」，设备名旁出现「互联网中继」标记。
+3. （可选，推荐）在 **固定地址（可选）** 里填你在 ngrok 控制台「Domains」领到的保留域名，再启动隧道——地址从此不变，对方存一次以后就不用每次找你要。隧道运行中这个输入框是锁住的，改域名要先「停止隧道」。
+4. 对方在**自己**的「跨网传输」卡片里选 **自建 / 其它**、把这条地址粘进 **中继地址**、点 **测试连接**（通了说明对方确实能从公网摸到你这台机器），然后在房间码输入框下点 **「对方不在同一网络？经中继加入」**，输 6 位房间码。
+5. 之后与平时的跨网传输一模一样：房主点「允许」、发送方点「开始传送」、接收方点「接收」，设备名旁出现「互联网中继」标记。
 
 前置条件与注意事项：
 
 - 需要 **ngrok 3.x** 和一个免费账号：macOS `brew install ngrok`、Windows `winget install ngrok.ngrok`，然后 `ngrok config add-authtoken <你的 token>`。没登录时 ngrok 报的那句英文原文会被翻成这条可直接照抄的命令显示在界面上。
-- **地址是临时的**：ngrok 免费版每次分配的域名都不一样，所以这条地址**不会存进设置**——停止隧道或退出应用即丢弃，下次要重新点「启动隧道」并把新地址发给对方。
+- **不填固定地址时地址是临时的**：ngrok 免费版每次分配的域名都不一样，所以这条地址**不会存进设置**——停止隧道或退出应用即丢弃，下次要重新点「启动隧道」并把新地址发给对方。
+- **想要固定入口就填保留域名**：ngrok 免费账号也能在控制台「Domains」领一个 `xxx.ngrok-free.app` 的保留域名，填进「固定地址（可选）」后每次启动隧道都是同一条地址，对方粘一次即可长期复用。填了不属于本账号的域名（或自己想的子域名）时，ngrok 的 `ERR_NGROK_313` 之类英文报错会被翻成「这个固定地址用不了／这个域名不在当前 ngrok 账号名下」这样能照做的提示，隧道不会带着半死状态挂在界面上。
 - 免费版**同时只能开一条隧道**；本机已经有别的 ngrok 在跑（或 4040 检查端口被占用）时会明确报出来，不会静默卡住。
 - 隧道只为「服务商 = ngrok」这件事存在：切到别的服务商、点「停止隧道」或退出应用，ngrok 子进程与本机中继都会被收掉。
 - 流量仍然经过 ngrok 的公网边缘节点透传，**没有端到端加密**，与用第三方中继同一层风险，见[隐私提醒](#隐私提醒)。
@@ -411,7 +413,7 @@ airdeop/
 │   ├── vercel.json              # rewrite 规则 + maxDuration
 │   └── package.json             # 只有 ws 一个依赖；deploy:cloudflare / dev:cloudflare 脚本
 ├── test/
-│   ├── engine.test.js           # 40 个引擎用例（node:test），含 5 条多语言、6 条跨网中继、9 条 ngrok 隧道用例
+│   ├── engine.test.js           # 46 个引擎用例（node:test），含 5 条多语言、6 条跨网中继、15 条 ngrok 隧道与固定地址用例
 │   ├── dashboard.test.js        # 6 个本机传输面板用例：地址判定、Host 白名单、路由与 CSP、快照内容、常驻端口
 │   ├── throughput.js            # 吞吐基准（`--relay` 加一跳本地中继）
 │   ├── e2e-two-instances.js     # 起两个真实 Electron 窗口，跑完整 UI 流程（含本地中继跨网）+ 截图
@@ -488,7 +490,7 @@ brew install --cask wine-stable
 
 | 层级 | 命令 | 覆盖内容 |
 | --- | --- | --- |
-| 引擎单测 | `npm test` | 多语言词典完整性（5 语言键集一致、占位符替换、未命中回显中文、locale 探测、模块不污染全局、Hub 语言状态，以及**扫描源码确认界面原文都有译文**）、房间码字符集与长度、名称/相对路径净化（含 `..`、Windows 保留名、超长名）、重名改名、二进制头编解码、目录展开与 `.DS_Store` 过滤、符号链接成环防护、私网判定、单播探测目标生成（/24 有界、跳过虚拟网卡）、广播不可达时单播兜底仍能发现房间、双 Peer 端到端（内容 + sha256 一致）、错误房间码拒绝、校验和不匹配丢弃、偏移量错位拒绝、路径越界写入拒绝、未批准连接不能发起传输；ngrok 部分 9 条：应用内检测（命中给绝对路径与版本、同名目录跳过、Windows 找 `ngrok.exe`、跑不出版本号仍算装了、PATH 之外按平台补常见目录且用户 PATH 优先）、隧道输出解析（只采信指向本机端口的 https 隧道、从 `started tunnel` 日志取地址、4040 被占时改取检查端口）、隧道生命周期（spawn 参数逐字校验、超时把半死的 ngrok `SIGTERM` 掉、ngrok 英文报错翻成可照做的下一步、交付地址之后再退出会回调）、hub 侧（未装时 `installed=false` 且启动直接报「这台电脑上没有检测到 ngrok」、本机内置中继真的绑到回环随机端口并被 `probeRelay` 拨通、隧道地址即本次会话的中继地址、重复点启动不再起第二条、停止/切服务商把 ngrok 与本机中继一起收掉、ngrok 自退后状态转 `error` 并弹「隧道已断开」）、界面门禁与 IPC 契约（`#ngrokOption`/`#ngrokBox` 首屏自带 `hidden`、可见性只认 `installed`、未装时服务商退回、ngrok 模式不把空中继地址存回去、三个隧道通道在主进程/preload/界面名字对得上） |
+| 引擎单测 | `npm test` | 多语言词典完整性（5 语言键集一致、占位符替换、未命中回显中文、locale 探测、模块不污染全局、Hub 语言状态，以及**扫描源码确认界面原文都有译文**）、房间码字符集与长度、名称/相对路径净化（含 `..`、Windows 保留名、超长名）、重名改名、二进制头编解码、目录展开与 `.DS_Store` 过滤、符号链接成环防护、私网判定、单播探测目标生成（/24 有界、跳过虚拟网卡）、广播不可达时单播兜底仍能发现房间、双 Peer 端到端（内容 + sha256 一致）、错误房间码拒绝、校验和不匹配丢弃、偏移量错位拒绝、路径越界写入拒绝、未批准连接不能发起传输；ngrok 部分 15 条（含 6 条固定地址：域名规范化与非法输入拦在起进程之前、`--url` 逐字进 spawn 参数、`ERR_NGROK_313`／域名不属于本账号两类报错翻成中文下一步、`ngrokDomain` 随设置保存并小写去空格、隧道透传该域名、隧道报错按界面语言翻译、输入框/设置/状态回读三处名字对得上）；其余 9 条：应用内检测（命中给绝对路径与版本、同名目录跳过、Windows 找 `ngrok.exe`、跑不出版本号仍算装了、PATH 之外按平台补常见目录且用户 PATH 优先）、隧道输出解析（只采信指向本机端口的 https 隧道、从 `started tunnel` 日志取地址、4040 被占时改取检查端口）、隧道生命周期（spawn 参数逐字校验、超时把半死的 ngrok `SIGTERM` 掉、ngrok 英文报错翻成可照做的下一步、交付地址之后再退出会回调）、hub 侧（未装时 `installed=false` 且启动直接报「这台电脑上没有检测到 ngrok」、本机内置中继真的绑到回环随机端口并被 `probeRelay` 拨通、隧道地址即本次会话的中继地址、重复点启动不再起第二条、停止/切服务商把 ngrok 与本机中继一起收掉、ngrok 自退后状态转 `error` 并弹「隧道已断开」）、界面门禁与 IPC 契约（`#ngrokOption`/`#ngrokBox` 首屏自带 `hidden`、可见性只认 `installed`、未装时服务商退回、ngrok 模式不把空中继地址存回去、三个隧道通道在主进程/preload/界面名字对得上） |
 | 中继单测 | `npm test`（同一批） | 6 条：`parseRelayBase` 归一化（裸域名 / https / wss 带端口 / 完整拨号串 / IPv4 / localhost，服务商选错时按 `*.vercel.app` 纠正）、配对状态机（排队 → 配对 → 双向透传 → 断开联动）、配对失败错误帧 + 1008 关闭、`restoreWaiting`/`restorePair` 休眠恢复语义、**Cloudflare Worker 版**（按房间分片、256 KB 二进制原样透传、休眠后重建配对关系、附件互指、槽位补充、路由 400/426/200、`no-host`）、**Vercel 入口**（rewrite 拍平路径后靠 `?room=` 配对、双向 256 KB 透传、路径形式仍可用、缺房间码报 `bad-room`、房主断开联动关闭访客） |
 | 面板单测 | `npm test`（同一批） | 6 条：回环地址判定（`127.x`、`::1`、`::ffff:127.x`，拒绝网卡地址与公网地址）、Host 头白名单（`localhost`/`127.0.0.1`/`[::1]:端口` 放行，`evil.example.com` 与缺 Host 拒绝）、路由与响应头（`/` 返回 HTML 且 CSP 里不许有 `unsafe-inline` 之外的 script 例外、`/panel.js`、`/i18n.js`、`/api/state` 字段齐全、未知路径与 `..%2f` 穿越一律 404、POST 一律 404、局域网来源即使伪装 Host 也只拿到 `404 SkyDrop`）、真实 700 KB 传输后的快照（累计字节、历史条目与文件名、序列化干净）、常驻端口启动与 `dispose` 释放、中继参数确实透传到快照（心跳 25 秒 / 配对超时 20 秒 / 退避表 5 段 / 峰值速率在任务结束后仍留存）、**面板文案完整性**（扫 `panel.js` 源码，模板字面量里去掉 `${}` 之后不许残留中文——把中文拼进字符串就切不出英文；面板用到的 14 个带参数键与方向 / 文件状态词在 4 种语言里都有译文且占位符被替换掉） |
 | 吞吐 | `npm run speed` | 64 MB 回环传输速率；加 `-- --relay` 走本地中继（两跳）测同一文件的速率差 |
@@ -496,10 +498,10 @@ brew install --cask wine-stable
 | 文本实测 | `npm run verify:text` | 起**真实应用实例** + 一个引擎侧访客（CDP 驱动真实窗口，载荷可调，默认含 2500 字长文本）：输入框打字 → 「仅文本发送」→ 访客立刻收到文本事件；访客反向发文本 → 应用「4 · 传送文本」列表出现「收到」行 → 点「复制」→ 用 `pbpaste` 对拍剪贴板逐字符一致；2500 字长文本折叠成 400 字、点击展开全文；40000 字超限 → 弹「文本过长」且对端收不到；「生成 TXT 发送」→ 访客收到 `文本 YYYY-MM-DD HH-MM-SS-n.txt`、内容逐字节一致、应用历史里是一条完成任务、`os.tmpdir()/skydrop-text` 临时目录自动清空；切到 English 校验文本卡片按钮与列表已翻译；面板快照带 `texts` 与 `textMaxBytes`；窗口控制台零报错。全部通过时打印「结果：全部通过 ✅」，否则非零退出 |
 | UI 端到端 | `npm run e2e` | 用 puppeteer-core 通过 CDP 驱动**两个真实 Electron 窗口**：A 建房间 → B 输码 → A 批准 → B 拖入 zip/txt/文件夹 → A 点接收 → 校验落盘内容逐字节一致、`.DS_Store` 被跳过、反向传输、**切换到英文并校验静态文案/按钮/历史记录/窗口标题都已翻译**、切回中文、离开房间后设备列表清空；随后**起一个本地中继进程跑跨网段阶段**：A 侧填中继 +「测试连接」→ 挂上房间槽位 → B 经中继加入（A 侧设备标记「互联网中继」）→ 双向确认 → 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零；输出 12 张截图到 `out/e2e/` |
 | 隧道实测 | `npm run verify:tunnel` | 起**真实应用实例** + 一个只知道公网地址的引擎侧访客（CDP 驱动真实窗口，需本机装了 ngrok）：应用启动即在状态里报出 `installed=true` 与版本号；把 `tunnel.installed` 改成 false 再走一遍页面里真实的 `renderRelay`，确认 ngrok 选项与隧道块整体消失、服务商退回非 ngrok（**未装即不可见**的门禁）；勾「允许通过互联网连接」→ 选「ngrok · 本机隧道」→ 自动开总开关、中继地址输入框让位给隧道面板；点「启动隧道」先显示「正在启动隧道…」，约 1 秒拿到 `https://xxxx.ngrok-free.app`，面板显示地址与状态、启动/停止按钮互斥；**从公网侧 GET `<地址>/health` 返回 200**（证明流量真的过了 ngrok 边缘节点回到本机内置中继）；房主 3 条槽位就绪；访客只经这条公网隧道加入（`via=relay`，房主侧不带局域网 IP）；访客 → 应用传 3 MB 单文件 + 一个含子目录的目录（字节数一致、层级保留），应用 → 访客反向传内容逐字节一致；点「复制」用 `pbpaste` 对拍剪贴板与隧道地址完全相同；点「停止隧道」后 `relay.url` 不残留、界面地址回占位、那条公网地址改报 `ERR_NGROK_3200`（404），退出后 `pgrep -fl "ngrok http"` 无残留进程；渲染进程控制台零报错；截图与主进程日志存到 `out/tunnel/`。**加 `--packaged` 跑同一遍**（`node test/tunnel-live.js --packaged`，从 `/tmp/skydrop-app/` 拉起安装包里的 `.app`）：证明 asar 里的 `relay/node-server.js` 能被应用内动态 `import()` 起来，隧道在打包版里同样通 |
-| 打包件实测 | `npm run verify:packaged` | 先 `hdiutil attach -nobrowse -readonly dist/隔空传-1.0.3-arm64.dmg -mountpoint /tmp/skydrop-mnt`，把 `隔空传.app` 拷到 `/tmp/skydrop-app/`（脚本从这里启动真实安装包），与源码实例配对后先切到 English 校验按钮文案与窗口标题（证明 5 语言词典确实进了 asar），传 8 MB 二进制 + 文本 + 目录；然后**再挂一个本地中继走跨网段那一遍**：打包版「测试连接」→ 槽位就绪 → 源码版经中继加入（打包版侧出现「互联网中继」标记）→ 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零，确认 asar 里的产物真的能建房、配对、经中继收文件 |
+| 打包件实测 | `npm run verify:packaged` | 先 `hdiutil attach -nobrowse -readonly dist/隔空传-1.0.4-arm64.dmg -mountpoint /tmp/skydrop-mnt`，把 `隔空传.app` 拷到 `/tmp/skydrop-app/`（脚本从这里启动真实安装包），与源码实例配对后先切到 English 校验按钮文案与窗口标题（证明 5 语言词典确实进了 asar），传 8 MB 二进制 + 文本 + 目录；然后**再挂一个本地中继走跨网段那一遍**：打包版「测试连接」→ 槽位就绪 → 源码版经中继加入（打包版侧出现「互联网中继」标记）→ 传 2 MB 校验 sha256 → 关房间后中继 `stats()` 归零，确认 asar 里的产物真的能建房、配对、经中继收文件 |
 | 中继部署件 | `npx wrangler deploy --dry-run` | 在 `relay/` 下做打包校验：`wrangler 4.166.0` 通过，Total Upload 11.17 KiB（gzip 3.68 KiB），绑定 `env.SKYDROP_ROOM (SkyDropRelayRoom) Durable Object`——不需要真实 Cloudflare 账号即可确认 Worker 与 `wrangler.toml` 可用 |
 
-当前状态：引擎 + 中继 + 面板 + ngrok 46/46 通过（`npm test` 跑 `engine.test.js` 40 条与 `dashboard.test.js` 6 条，含 UDP 发现的单播兜底、坏目标不中断、加入失败自动重扫报出可用房间与列表过期，以及 9 条 ngrok 检测/隧道/hub 状态与界面门禁用例），隧道实测 `npm run verify:tunnel` 「全部通过 ✅」（22 项检查，本机 ngrok 3.37.2：应用内检测到 → 启动隧道 1 秒拿到公网地址 → 从公网侧 `GET /health` 返回 200 → 访客只经这条隧道双向传 3 MB 与含子目录的目录 → 复制进系统剪贴板逐字符一致 → 停止后那条地址改报 `ERR_NGROK_3200`、`pgrep` 无残留 ngrok 进程；`--packaged` 对安装包里的 `.app` 再跑一遍也是「全部通过 ✅」），文本实测 `npm run verify:text` 「全部通过 ✅」，面板实测 `npm run verify:panel` 「全部通过 ✅」，端到端（含跨网段阶段）「全部通过 ✅」，打包件实测通过（局域网 8 MB + 经中继 2 MB，两次 sha256 都一致，关房间后中继侧 `{"rooms":0,"waiting":0,"pairs":0}`）。另外校验过 mac 与 win 两套安装包里的 `app.asar` md5 完全相同（同一份应用代码），且包内 12 个文件（`main/index.js`、`main/store.js`、`engine/hub.js`、`engine/peer.js`、`engine/protocol.js`、`engine/relay.js`、`engine/tunnel.js`、`common/i18n.js`、`renderer/app.js`、`renderer/index.html`、`preload/index.js`、`relay/node-server.js`）逐个与仓库源码 md5 一致——`relay/node-server.js` 现在也在包里，因为 ngrok 模式要在应用内起本机中继；asar 里还能直接读到 `relay.js` 的 `openRelaySlots`、`tunnel.js` 的 `findNgrok` 与 5 语言的隧道文案，说明跨网功能确实进了安装包而不是只在源码里。
+当前状态：引擎 + 中继 + 面板 + ngrok 52/52 通过（`npm test` 跑 `engine.test.js` 46 条与 `dashboard.test.js` 6 条，含 UDP 发现的单播兜底、坏目标不中断、加入失败自动重扫报出可用房间与列表过期，以及 15 条 ngrok 检测/隧道/固定地址/hub 状态与界面门禁用例），隧道实测 `npm run verify:tunnel` 「全部通过 ✅」（28 项检查，本机 ngrok 3.37.2：应用内检测到 → 启动隧道 1 秒拿到公网地址 → 从公网侧 `GET /health` 返回 200 → 访客只经这条隧道双向传 3 MB 与含子目录的目录 → 复制进系统剪贴板逐字符一致 → 停止后那条地址改报 `ERR_NGROK_3200`、`pgrep` 无残留 ngrok 进程；固定地址那一段用真实 ngrok 账号跑：填一个不属于本账号的保留域名 → ngrok 回 `ERR_NGROK_313` → 界面显示「这个固定地址用不了：免费版只能用 ngrok 控制台「Domains」里领到的那一个保留域名…」且不留残留进程 → 清空后照常随机分配 → 运行中输入框锁住、停止后恢复可编辑；`--packaged` 对安装包里的 `.app` 再跑一遍也是「全部通过 ✅」），文本实测 `npm run verify:text` 「全部通过 ✅」，面板实测 `npm run verify:panel` 「全部通过 ✅」，端到端（含跨网段阶段）「全部通过 ✅」，打包件实测通过（局域网 8 MB + 经中继 2 MB，两次 sha256 都一致，关房间后中继侧 `{"rooms":0,"waiting":0,"pairs":0}`）。另外校验过 mac 与 win 两套安装包里的 `app.asar` md5 完全相同（同一份应用代码），且包内 12 个文件（`main/index.js`、`main/store.js`、`engine/hub.js`、`engine/peer.js`、`engine/protocol.js`、`engine/relay.js`、`engine/tunnel.js`、`common/i18n.js`、`renderer/app.js`、`renderer/index.html`、`preload/index.js`、`relay/node-server.js`）逐个与仓库源码 md5 一致——`relay/node-server.js` 现在也在包里，因为 ngrok 模式要在应用内起本机中继；asar 里还能直接读到 `relay.js` 的 `openRelaySlots`、`tunnel.js` 的 `findNgrok` 与 5 语言的隧道文案，说明跨网功能确实进了安装包而不是只在源码里。
 
 ---
 
@@ -541,6 +543,9 @@ Vercel 的 Function 是多实例的，一条连接固定落在某个实例上，
 **Q：跨网传输卡片里怎么没有「ngrok · 本机隧道」这一项？**
 应用只在**真的在这台电脑上找到 ngrok** 时才把这一项和隧道面板画出来（找不到时界面和以前一模一样，不会留一个点不动的按钮）。找的顺序是 `PATH` → 各平台常见安装目录（macOS：`/opt/homebrew/bin`、`/usr/local/bin`、`/opt/local/bin`；Windows：`%LOCALAPPDATA%\ngrok`、`%ProgramFiles%\ngrok`、scoop、Chocolatey）。装好 `brew install ngrok` / `winget install ngrok.ngrok` 后**重启隔空传**再看。已经装到别的路径、或者装完没重启过应用，都可以先确认 `ngrok version` 在终端里能跑通（需要 3.x，1.x/2.x 的参数不一样会被判成「版本太旧」）。
 
+**Q：ngrok 隧道每次地址都变，能不能固定？**
+能。ngrok 免费账号也能在 [ngrok 控制台 → Domains](https://dashboard.ngrok.com/domains) 领到一个保留域名（形如 `abc123.ngrok-free.app`），把它填进隧道面板的 **「固定地址（可选）」** 再启动隧道，以后每次都是同一条地址，对方粘一次就能长期复用。填自己想的子域名或别人名下的域名会被 ngrok 拒掉（`ERR_NGROK_313` 等），界面会直接翻成中文告诉你只能用自己领到的那一个。隧道运行中输入框是锁住的——改域名要先「停止隧道」再起。
+
 **Q：点了「启动隧道」却报「ngrok 未登录」/ 报一串英文。**
 应用会把 ngrok 的英文报错翻成中文并把下一步写清楚：没登录时报的就是 `ngrok config add-authtoken <token>`（token 在 ngrok 控制台右上角 Your Authtoken）；报「同时只能开一条隧道」说明本机已有别的 ngrok 在跑，先停掉那条；报「检查端口被占用」说明 4040 被别的程序占了，应用会改从 ngrok 自己的日志里读它实际换用的端口，一般不会失败；报证书/代理相关错误通常是企业网络在 TLS 中间做了拦截。
 
@@ -565,7 +570,7 @@ Vercel 的 Function 是多实例的，一条连接固定落在某个实例上，
 
 - 传输未加密，仅限可信局域网；走中继时中继运营方能看到文件名与文件内容（端到端加密是后续项，当前版本未实现）。
 - 跨网段传输需要自己部署中继；Vercel 版不保证跨实例配对，且受 Function `maxDuration`（本仓库设为 300 秒）限制，长时间空闲的连接会被平台回收——跨网挂长时间「等人点接收」建议用 Cloudflare 或自建。
-- ngrok 模式依赖**这台电脑上另外装好的 ngrok 3.x**（应用不内置 ngrok 二进制，也不替你注册账号）：没装就没有这个入口；免费版每次分配的公网域名都不一样、同时只能开一条隧道，所以这条地址只适合现场发给对方，不能当固定入口；隧道只在本机运行期间存在，退出应用即收掉 ngrok 子进程与内置中继。
+- ngrok 模式依赖**这台电脑上另外装好的 ngrok 3.x**（应用不内置 ngrok 二进制，也不替你注册账号）：没装就没有这个入口；免费版每次分配的公网域名都不一样、同时只能开一条隧道——不填「固定地址」时这条地址只适合现场发给对方，不能当固定入口（免费账号也能在 ngrok 控制台「Domains」领一个保留域名，填进「固定地址（可选）」后每次都是同一个入口）；隧道只在本机运行期间存在，退出应用即收掉 ngrok 子进程与内置中继。
 - 走中继时所有字节都经过中继（两跳），速率取决于中继的出口带宽与免费额度（Cloudflare / Vercel 免费层都按流量计费/限额）；能走局域网时应用始终优先直连。
 - 没有断点续传：中断后需重传整个文件。
 - 没有多播同时分发（对多台设备是逐台串行推流）。

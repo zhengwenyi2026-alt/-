@@ -99,6 +99,8 @@ class Hub extends EventEmitter {
     this._relaySeq = 0; // 给每条中继连接一个独立计数键，避免一个乱试房间码的人连带锁死别人
     // ngrok 隧道：本机起一个中继，再让 ngrok 把它暴露成公网地址（没装 ngrok 时 installed 一直是 false）
     this.ngrok = { installed: Boolean(opts.ngrokInstalled), path: String(opts.ngrokPath || ''), version: String(opts.ngrokVersion || '') };
+    // 空 = 每次让 ngrok 随机分配；填了就是账号名下的保留域名，隧道起来一直是同一个入口
+    this.ngrokDomain = String(opts.ngrokDomain || '').trim().slice(0, 120);
     this.tunnel = { status: 'off', url: '', error: '', relayPort: 0, pid: 0 };
     this._tunnel = null; // tunnel.startTunnel 返回的句柄
     this._localRelay = null; // 仅绑 127.0.0.1 的本机中继
@@ -134,7 +136,7 @@ class Hub extends EventEmitter {
       },
       room: this.room ? { ...this.room, codeDisplay: formatRoomCode(this.room.code) } : null,
       relay: { ...this._relayState, enabled: this.relayEnabled, provider: this.relayProvider, url: this.relayUrl },
-      tunnel: { ...this.tunnel, installed: this.ngrok.installed, version: this.ngrok.version },
+      tunnel: { ...this.tunnel, installed: this.ngrok.installed, version: this.ngrok.version, domain: this.ngrokDomain },
       joined: this._localGuestPeer
         ? {
             room: this._joinedRoom,
@@ -429,6 +431,7 @@ class Hub extends EventEmitter {
       const handle = await this._spawnTunnel({
         targetPort: relay.port,
         ngrokPath: this.ngrok.path,
+        domain: this.ngrokDomain,
         onExit: (reason) => this._onTunnelExit(reason),
       });
       this._tunnel = handle;
@@ -443,6 +446,8 @@ class Hub extends EventEmitter {
     } catch (err) {
       this._tunnel = null;
       await this._stopLocalRelay();
+      // ngrok 的报错是引擎里的中文原文，按当前界面语言查词典，没命中就照原样显示
+      err.message = I18N.t(err.message, null, this.language);
       this.tunnel = { status: 'error', url: '', error: err.message, relayPort: 0, pid: 0 };
       this.notice('隧道启动失败：{msg}', { msg: err.message }, 'error');
       this._pushState();
@@ -456,8 +461,9 @@ class Hub extends EventEmitter {
     this._tunnel = null;
     this._stopLocalRelay();
     this._closeRelay();
-    this.tunnel = { status: 'error', url: '', error: reason || '隧道连接已断开', relayPort: 0, pid: 0 };
-    this.notice('隧道已断开：{msg}', { msg: reason || 'ngrok 进程退出了' }, 'warn');
+    const reasonText = I18N.t(reason || '隧道连接已断开', null, this.language);
+    this.tunnel = { status: 'error', url: '', error: reasonText, relayPort: 0, pid: 0 };
+    this.notice('隧道已断开：{msg}', { msg: reasonText }, 'warn');
     this._pushState();
   }
 
@@ -1203,6 +1209,8 @@ class Hub extends EventEmitter {
     if (typeof patch.relayEnabled === 'boolean') this.relayEnabled = patch.relayEnabled;
     if (RELAY_PROVIDERS.includes(patch.relayProvider)) this.relayProvider = patch.relayProvider;
     if (typeof patch.relayUrl === 'string') this.relayUrl = patch.relayUrl.trim().slice(0, 200);
+    // 隧道运行中不改域名（界面把输入框锁住了）：这里只负责存，下次启动隧道才生效
+    if (typeof patch.ngrokDomain === 'string') this.ngrokDomain = patch.ngrokDomain.trim().toLowerCase().slice(0, 120);
     if (relayTouched && this.room) this._openRelay(); // 槽位池按新配置重开
     // 选了别的服务商就别让 ngrok 进程在后台空跑：隧道只为 provider=ngrok 存在
     if (tunnelOwnedUrl && typeof patch.relayProvider === 'string' && patch.relayProvider !== 'ngrok') {
